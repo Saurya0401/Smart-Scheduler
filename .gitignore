@@ -1,0 +1,20 @@
+# pycharm and python folders
+__pycache__/
+smartscheduler/__pycache__/
+.idea/
+
+# files
+*.txt
+!requirements.txt
+
+# .exe build folders
+build/
+dist/
+
+# databases
+smartscheduler/**/*.db
+test/**/*.db
+
+# test folders and files
+smartscheduler/test*/
+smartscheduler/test*

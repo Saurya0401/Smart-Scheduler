@@ -1,0 +1,123 @@
+sub_code,sub_name
+EMT1016,Engineering Mathematics I
+EMT1026,Engineering Mathematics II
+EMT2036,Engineering Mathematics III
+EMT2046,Engineering Mathematics IV
+EMT2066,Industrial Mathematics
+EMT3066,Random Signal and Network Analysis
+EEL1166,Circuit Theory
+EEL1176,Field Theory
+EEL2186,Circuits and Signals
+EEE1016,Electronics I
+EEE1026,Electronics II
+EEE1036,Digital Logic Design
+EEE1046,Electronics III
+EEE2056,Physical Electronics
+EEE2146,Microelectronics Circuit Analysis & Design
+EEE3076,Power Electronics
+EEE3096,Communications Electronics
+EEE3106,Processing and Fabrication Technology
+EEE3156,Digital System
+EEE3196,Integrated VLSI Systems
+EEE4166,Digital Integrated Circuits
+EEE4176,Analog Integrated Circuits
+EEE4186,VLSI System Design & Modeling Technique
+ECE1016,Computer and Program Design
+ECE1026,Algorithms and Data Structures
+ECE2046,Computer Organization and Architecture
+ECE2056,Data Communications and Networking
+ECE2066,Operating Systems
+ECE2216,Microcontroller and Microprocessor Systems
+ECE3056,Data Science with Python Programming
+ECE3066,Artificial Intelligence Systems and Applications
+ECE3076,Database Systems
+ECE3086,Multimedia Technology and Applications
+ECE3096,Compiler Construction
+ECE3136,Java Technology
+ECE3156,Software Engineering
+ECE3166,Advanced Microprocessors
+ECE3186,Embedded Iot System and Application
+ECE3206,Object Oriented Programming with C++
+ECE3226,Advanced Computer Architecture & Parallel Computing
+ECE3256,CyberSecurity
+ECE3296,Digital Image and Video Processing
+ECE3306,Computer Graphics and Virtual Reality
+ECE3336,Mobile Application Development
+ECE4116,Digital Computer Design
+ECE4236,Parallel Processing & Programming
+ECE4246,Advanced Object-Oriented Design with Java
+ECE4346,Distributed Information Systems
+ETN2016,Analog Communications
+ETN2046,Fundamental of Wireless Communications
+ETN2126,Information Theory and Error Coding
+ETN3046,Analog and Digital Communications
+ETN3056,Communications Networks
+ETN3096,Digital Signal Processing
+ETN3136,Digital Communications
+ETN4106,Optoelectronics and Optical Communications
+ETN4116,Advanced Networking Techniques
+ETN4206,Satellite Communications
+EEL1196,Instrumentation and Measurement Techniques
+EEL1206,Introduction to Machines and Power Systems
+EEL2216,Control Theory
+EEL4236,Robotics and Automation
+EMF2016,Electromagnetics Theory
+EMF3046,RF Measurement Techniques
+EMF3066,Antenna and Propagation
+EMF4066,RF Circuit Design
+EMF4076,Electromagnetic Interference
+EMF4086,RF Transistor Circuit Design
+EMF4096,Radar Systems Design and Analysis
+EEL1016,Energy Conversion I
+EEL2026,Power Transmission and Distribution
+EEL2046,Energy Conversion II
+EEL2066,Electrical Engineering Materials
+EEL3036,Power System Analysis
+EEL3086,Switchgear and Protection
+EEL3136,Electrical Drives
+EEL3146,Electric Power Utilization and Installation
+EEL3156,Renewable Energy Technology
+EEL4106,High Voltage Engineering
+EEL4116,Power Stations
+EEL4126,Power System Operation and Control
+EOP2016,Fundamentals of Optics
+EOP3026,Optoelectronics Devices
+EOP3036,Fabrication and Packaging Technology
+EOP3046,Optical Waveguide and Devices
+EOP3056,Optical Metrology and Testing
+EOP4066,Optical Communication Systems
+EOP4076,Laser Technology and Applications
+EOP4086,Optical Signal Processing
+EOP4096,Solid State Lighting
+EOP4106,Photovoltaic Devices and Systems
+ENT2016,Solid State Electronics
+ENT3036,Semiconductor Devices
+ENT3056,Advanced Fabrication Technology
+ENT3076,Nano-Science
+ENT4046,N/MEMs
+ENT4066,Nanoelectronics Materials and Devices
+ENT4086,Diagnostic Technology
+EPE3016,Capstone Project
+EPE3026,Industrial Training
+EPE4036,Project
+EES3016,Engineer and Society
+EES3036,Project Management
+CO-Q,Co-Curriculum (All CO-Q Subjects)
+MPU(U4),Co-Curriculum (All MPU(U4) Subjects)
+BEN2010,Introduction to Cyberpreneurship
+BHM2046,Basic Economics Accounting and Management
+BHM3086,Law for Engineers
+MPU3113,Hubungan Etnik
+MPU3123,Tamadun Islam dan Tamadun Asia
+MPU3143,Bahasa Melayu Komunikasi 2
+MPU3173,Pengajian Malaysia 3
+MPU3201,Bahasa Kebangsaan A
+MPU3202,French for Beginners
+MPU3204,Spanish for Beginners
+MPU3205,Chinese for Beginners
+MPU3206,Japanese for Beginners
+MPU3207,Korean for Beginners
+MPU3213,Entrepreneurship in Cross Border E-Commerce
+MPU3323,Introduction to Multicultural Studies in Malaysia
+MPU3353,Introduction to Malaysian Economy
+PWC1010,Workplace Communication

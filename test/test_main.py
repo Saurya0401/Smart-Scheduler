@@ -20,20 +20,20 @@ class AccountTest(unittest.TestCase):
     def test_login(self):
         student_id, pswrd = self.test_sign_up()
         self.smart_sch.login(student_id, pswrd)
-        self.assertEqual(self.smart_sch.__signed_in__(student_id), True)
+        self.assertEqual(self.smart_sch.__logged_in__(student_id), True)
 
     def test_logout(self):
         student_id, pswrd = self.test_sign_up()
         self.smart_sch.login(student_id, pswrd)
         self.smart_sch.logout()
-        self.assertEqual(self.smart_sch.__signed_in__(student_id), False)
+        self.assertEqual(self.smart_sch.__logged_in__(student_id), False)
 
     def test_change_pswrd(self):
         student_id, pswrd = self.test_sign_up()
         new_pswrd = "new_test_password"
         self.smart_sch.change_pswrd(student_id, pswrd, new_pswrd, new_pswrd)
         self.smart_sch.login(student_id, new_pswrd)
-        self.assertEqual(self.smart_sch.__signed_in__(student_id), True)
+        self.assertEqual(self.smart_sch.__logged_in__(student_id), True)
 
     def test_del_acct(self):
         student_id, pswrd = self.test_sign_up()

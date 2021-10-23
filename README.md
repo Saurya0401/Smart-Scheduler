@@ -19,4 +19,4 @@ The `build` folder is for debugging purposes, while the `dist` folder will conta
 The `SmartScheduler` sub-folder will contain the stand alone `.exe`[^1], and will also itself be packaged in a TAR 
 archive inside `releases`. <br />
 
-[^1]  There is a chance that antivirus software may detect the executable binary as false positive trojan.
+[^1]:  There is a chance that antivirus software may detect the executable binary as false positive trojan.

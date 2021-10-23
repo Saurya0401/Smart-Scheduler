@@ -14,11 +14,11 @@ pip install -r requirements.txt && (
 ECHO ==============================
 ECHO Building SmartScheduler.exe...
 ECHO ==============================
-pyinstaller --onefile --distpath ./dist/SmartScheduler smartscheduler.spec && (
+pyinstaller --clean --distpath ./dist/SmartScheduler smartscheduler.spec && (
   ECHO SmartScheduler.exe successfully built.
   (call )
 ) || (
-  ECHO SmartScheduler.exe build faied.
+  ECHO SmartScheduler.exe build failed.
   PAUSE
   exit /b
 )
@@ -35,6 +35,6 @@ tar -cvf releases\SmartScheduler.tar -C dist SmartScheduler && (
   PAUSE
   exit /b
 )
-ECHO SmartScheduler.tar placed in base directory.
+ECHO SmartScheduler.tar placed in releases directory.
 ECHO Build successful.
 PAUSE

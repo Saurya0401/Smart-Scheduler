@@ -7,8 +7,11 @@ __all__ = ["SmartSchedulerDB"]
 
 
 class SmartSchedulerDB:
+    """
+    Manages the database for the Smart Scheduler application.
+    """
 
-    TAB_SCHEDULES = "schedules"
+    TAB_ACCOUNTS = "accounts"
     COL_STU_ID = "stu_ID"
     COL_PAS_HASH = "pass_hash"
     COL_SESSION_ID = "session_id"
@@ -19,14 +22,21 @@ class SmartSchedulerDB:
     COL_SUB_NAME = "sub_name"
 
     def __init__(self, db_path: str):
+        """
+        Initialise database manager
+        :param db_path: path to database
+        """
+
         self.db_path: str = db_path
         self.db_ret: list = []
         self.db_wait: bool = False
-        self.__create_table__()
+        self.__create_tables__()
 
-    def __create_table__(self):
+    def __create_tables__(self):
+        """Create the required tables in the database, if they do not already exist"""
+
         self.__send_cmd__(f'''
-        CREATE TABLE IF NOT EXISTS {self.TAB_SCHEDULES} 
+        CREATE TABLE IF NOT EXISTS {self.TAB_ACCOUNTS} 
         ({self.COL_STU_ID} text NOT NULL PRIMARY KEY,
         {self.COL_PAS_HASH} text,
         {self.COL_SCHEDULE} text,
@@ -44,6 +54,12 @@ class SmartSchedulerDB:
             continue
 
     def __db_cmd__(self, cmd: str, params: dict = None):
+        """
+        Send a SQL command to the database. If the command is a query, store the result in self.db_ret
+        :param cmd: the SQL command
+        :param params: optional parameters for the SQL command
+        """
+
         conn = None
         try:
             conn = sql.Connection(self.db_path)
@@ -60,59 +76,84 @@ class SmartSchedulerDB:
             self.db_wait = False
 
     def __send_cmd__(self, cmd: str, params: dict = None):
+        """
+        Initialise a new thread to send a SQL command to the database
+        :param cmd: the SQL command
+        :param params: optional parameters for the SQL command
+        """
+
         self.db_wait = True
         Thread(target=self.__db_cmd__, args=(cmd, params)).start()
 
-    def fetch_all(self, query_col: str, table: str) -> list:
-        self.__send_cmd__(f"SELECT {query_col} FROM {table}")
-        while self.db_wait:
-            continue
-        return self.db_ret
+    def retrieve_all(self, table: str) -> list:
+        """
+        Retrieve all data from a specific table
+        :param table: the table to retrieve data from
+        :return: a list containing tuples, one for each record in the table
+        """
 
-    def fetch_all_data(self, table: str) -> list:
         self.__send_cmd__(f"SELECT * FROM {table}")
         while self.db_wait:
             continue
         return self.db_ret
 
-    def new_record(self, s_id: str, pass_hash: str, sch: str, subs: str):
-        self.__send_cmd__(f"INSERT INTO {self.TAB_SCHEDULES} VALUES (:s_id, :pass_hash, :sch, :subs, :session)",
+    def new_account(self, s_id: str, pass_hash: str, sch: str, subs: str):
+        """
+        Add a new account to accounts table in the database
+        :param s_id: the student ID of the account holder
+        :param pass_hash: the account's password hash
+        :param sch: the account's schedule
+        :param subs: the account's registered subjects
+        """
+
+        self.__send_cmd__(f"INSERT INTO {self.TAB_ACCOUNTS} VALUES (:s_id, :pass_hash, :sch, :subs, :session)",
                           {"s_id": s_id, "pass_hash": pass_hash, "sch": sch, "subs": subs, "session": "0"})
         while self.db_wait:
             continue
 
-    def fetch_record(self, s_id: str, query_col) -> tuple:
-        self.__send_cmd__(f"SELECT {query_col} FROM {self.TAB_SCHEDULES} WHERE {self.COL_STU_ID}=:s_id",
+    def query_account_info(self, s_id: str, query_col) -> tuple:
+        """
+        Retrieve a specific account information field in the accounts table via a SQL query
+        :param s_id: the look up key for the SQL query
+        :param query_col: the account information column to query
+        :return: a tuple containing the field's information
+        """
+
+        self.__send_cmd__(f"SELECT {query_col} FROM {self.TAB_ACCOUNTS} WHERE {self.COL_STU_ID}=:s_id",
                           {"s_id": s_id})
         while self.db_wait:
             continue
         return self.db_ret[0] if self.db_ret else ()
 
-    def update_record(self, s_id: str, update_col: str, update_val: str):
-        self.__send_cmd__(f"UPDATE {self.TAB_SCHEDULES} SET {update_col}=:val WHERE {self.COL_STU_ID}=:s_id",
+    def update_account_info(self, s_id: str, update_col: str, update_val: str):
+        """
+        Update a specific account information field in the accounts table via a SQL command
+        :param s_id: the look up key for the SQL command
+        :param update_col: the account information column to update
+        :param update_val: the updated value
+        """
+
+        self.__send_cmd__(f"UPDATE {self.TAB_ACCOUNTS} SET {update_col}=:val WHERE {self.COL_STU_ID}=:s_id",
                           {"s_id": s_id, "val": update_val})
         while self.db_wait:
             continue
 
-    def delete_record(self, s_id: str):
-        self.__send_cmd__(f"DELETE FROM {self.TAB_SCHEDULES} WHERE {self.COL_STU_ID}=:s_id", {"s_id": s_id})
+    def delete_account(self, s_id: str):
+        """
+        Remove an account from the accounts table in the database via an SQL command
+        :param s_id: the look up key for the SQL command
+        """
+
+        self.__send_cmd__(f"DELETE FROM {self.TAB_ACCOUNTS} WHERE {self.COL_STU_ID}=:s_id", {"s_id": s_id})
         while self.db_wait:
             continue
 
-    def new_sub(self, s_code: str, s_name: str):
-        self.__send_cmd__(f"INSERT INTO {self.TAB_SUB_INFO} VALUES (:s_code, :s_name)",
-                          {"s_code": s_code, "s_name": s_name})
-        while self.db_wait:
-            continue
+    def make_subs_list(self, subs_info: list):
+        """
+        Create or update the subjects table with the latest available subjects information
+        :param subs_info: a list containing tuples like (subject_code, subject_name)
+        """
 
-    def fetch_sub_name(self, s_code: str) -> tuple:
-        self.__send_cmd__(f"SELECT {self.COL_SUB_NAME} FROM {self.TAB_SUB_INFO} WHERE {self.COL_SUB_CODE}=:s_code",
-                          {"s_code": s_code})
-        while self.db_wait:
-            continue
-        return self.db_ret[0] if self.db_ret else ()
-
-    def make_subs_list(self, subs_info):
         conn = None
         try:
             conn = sql.Connection(self.db_path)
@@ -130,4 +171,6 @@ class SmartSchedulerDB:
 
 
 if __name__ == "__main__":
+    # for quick testing
+
     pass

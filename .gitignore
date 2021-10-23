@@ -1,6 +1,7 @@
 # pycharm and python folders
 __pycache__/
 smartscheduler/__pycache__/
+test/__pycache__/
 .idea/
 
 # files
@@ -10,6 +11,9 @@ smartscheduler/__pycache__/
 # .exe build folders
 build/
 dist/
+
+# .tar builds
+*.tar
 
 # databases
 smartscheduler/**/*.db

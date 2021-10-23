@@ -48,6 +48,6 @@ exe = EXE(pyz,
           codesign_identity=None,
           entitlements_file=None )
 
-copyfile(f'{working_dir}\\config.ini', 'dist\\config.ini')
-makedirs('dist\\remote_server', exist_ok=True)
-copyfile(f'{working_dir}\\remote_server\\subjects.csv', 'dist\\remote_server\\subjects.csv')
+makedirs('dist\\SmartScheduler\\remote_server', exist_ok=True)
+copyfile(f'{working_dir}\\config.ini', 'dist\\SmartScheduler\\config.ini')
+copyfile(f'{working_dir}\\remote_server\\subjects.csv', 'dist\\SmartScheduler\\remote_server\\subjects.csv')

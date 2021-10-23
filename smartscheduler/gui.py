@@ -7,9 +7,19 @@ from smartscheduler.utils import Utils
 
 
 class GUtils:
+    """Provides graphical utilities for tkinter windows."""
 
     @staticmethod
     def disp_msg(msg: str, msg_t: str, parent: tk.Tk or tk.Toplevel):
+        """
+        Display a message in a pop up dialog box.
+
+        The look of the dialog box differs based on whether the message is just information, an error, or a warning.
+        :param msg: the message to display
+        :param msg_t: the nature of the message to display
+        :param parent: which window this dialog box should belong to
+        """
+
         if msg_t == "info":
             return messagebox.showinfo("Info", msg, parent=parent)
         elif msg_t == "err":
@@ -19,10 +29,24 @@ class GUtils:
 
     @staticmethod
     def disp_conf(title: str, msg: str, parent: tk.Tk or tk.Toplevel) -> bool:
+        """
+        Display a confirmation dialog box with "Yes" and "No" options.
+        :param title: the title of the dialog box
+        :param msg: the message to display
+        :param parent: which window this dialog box should belong to
+        :return: a boolean to represent the user's decision
+        """
+
         return messagebox.askyesno(title, msg, parent=parent)
 
     @staticmethod
     def loading_win(parent: tk.Tk or tk.Toplevel) -> tk.Toplevel:
+        """
+        Create and return a tk.TopLevel window that indicates a "loading" action.
+        :param parent: which window this TopLevel window should belong to
+        :return: a tk.TopLevel window
+        """
+
         win = tk.Toplevel(master=parent)
         win.overrideredirect(True)
         wait_l = tk.Label(master=win, text="Loading, please wait...", **Style.def_txt(font=Font.HEADING))
@@ -31,12 +55,26 @@ class GUtils:
         return win
 
     @staticmethod
-    def win_pos(window: tk.Tk or tk.Toplevel, w_mul: float, h_mul: float):
+    def win_pos(window: tk.Tk or tk.Toplevel, w_mul: float, h_mul: float) -> tuple:
+        """
+        Return the position of a window on the screen but modified with height and width multipliers.
+        :param window: the window whose position must be determined
+        :param w_mul: the width multiplier
+        :param h_mul: the height multiplier
+        :return: a tuple containing the x and y coordinates of the window
+        """
+
         scr_w, scr_h = window.winfo_screenwidth(), window.winfo_screenheight()
         return int(w_mul * scr_w), int(h_mul * scr_h)
 
     @staticmethod
     def lift_win(window: tk.Tk or tk.Toplevel, pin: bool = False):
+        """
+        Lift a window to the top layer of the OS's window manager and then optionally pin it in place.
+        :param window: the window to be lifted
+        :param pin: optional, the window will be pinned to the top layer of the window manager if true
+        """
+
         window.grab_set()
         if pin:
             window.lift()
@@ -46,28 +84,44 @@ class GUtils:
 
     @staticmethod
     def disp_loading(loading_win: tk.Toplevel, gui_cmd, *args, **kwargs):
+        """
+        Display a loading screen to mask the execution a GUI command.
+        :param loading_win: the loading window to display
+        :param gui_cmd: the gui command to execute
+        :param args: arguments for the gui command
+        :param kwargs: keyword arguments for the gui command
+        """
+
         if not loading_win.winfo_viewable():
             loading_win.deiconify()
         loading_win.after(100, lambda: gui_cmd(*args, **kwargs))
 
 
 class Colours:
+    """The colours used in the GUI, retrieved from config.ini."""
+
     try:
         BG, TEXT, INPUT, M_BLUE, M_RED = Utils.colours()
     except FatalError as e:
+        # todo: replace with default colours instead of exiting
         GUtils.disp_msg(e.args[0], "err", None)
         raise SystemExit
 
 
 class Font:
+    """The font and font sizes used in the GUI, retrieved from config.ini."""
+
     try:
         DEF_FAMILY, NORMAL, HEADING, TITLE = Utils.fonts()
     except FatalError as e:
+        # todo: replace with default font and font sizes instead of exiting
         GUtils.disp_msg(e.args[0], "err", None)
         raise SystemExit
 
 
 class Padding:
+    """Provides a range of horizontal and vertical padding combinations for tkinter widgets."""
+
     DEF_X = 5
     DEF_Y = 5
 
@@ -109,6 +163,7 @@ class Padding:
 
 
 class Style:
+    """Provides default styles for text and button widgets."""
 
     @staticmethod
     def def_btn(width: int = 10, bg: str = Colours.M_BLUE, font: tuple = Font.NORMAL):
@@ -128,8 +183,17 @@ class Style:
 
 
 class LoginWindow(tk.Tk):
+    """Displays a window for the user to login, sign up, or change password."""
 
     def __init__(self, smart_sch: SmartScheduler, action: str = "login", *args, **kwargs):
+        """
+        Initialises widgets and builds login, sign up, or change password window.
+        :param smart_sch: an instance of SmartScheduler to serve as the backend for executing any action
+        :param action: indicates whether the window is for login, sign up or change password
+        :param args: additional arguments for the tk.Tk superclass
+        :param kwargs: additional keyword arguments for the tk.Tk superclass
+        """
+
         super().__init__(*args, **kwargs)
         self.action = action
         self.smart_sch = smart_sch
@@ -173,8 +237,8 @@ class LoginWindow(tk.Tk):
                                   command=self.__action__ if self.action == "sign up" else lambda: self.change_win(
                                       "sign up"))
         self.pswrd_b = tk.Button(self.btn_f, text="Change Password", **(
-            Style.def_btn(width=15) if action == "change password" else Style.txt_btn(width=15))
-                                 , command=self.__action__ if self.action == "change password" else lambda:
+            Style.def_btn(width=15) if action == "change password" else Style.txt_btn(width=15)),
+                                 command=self.__action__ if self.action == "change password" else lambda:
                                  self.change_win("change password"))
 
         self.login_f.grid(sticky="nsew")
@@ -203,10 +267,17 @@ class LoginWindow(tk.Tk):
         self.geometry("+%d+%d" % GUtils.win_pos(self, 0.4, 0.4))
 
     def change_win(self, action: str):
+        """
+        Changes window widgets to accommodate a different action
+        :param action: the new action to change to
+        """
+
         self.destroy()
         LoginWindow(self.smart_sch, action=action).mainloop()
 
     def __action__(self):
+        """Inserts a loading screen before any actions are executed."""
+
         if self.action == "login":
             GUtils.disp_loading(self.loading_win, self.__login__)
         elif self.action == "sign up":
@@ -215,6 +286,8 @@ class LoginWindow(tk.Tk):
             GUtils.disp_loading(self.loading_win, self.__change_password__)
 
     def __change_password__(self):
+        """Attempts to change password and displays any errors encountered."""
+
         try:
             self.smart_sch.change_pswrd(self.inp_s_id.get(), self.inp_pswrd.get(), self.inp_n_pswrd.get(),
                                         self.inp_c_pswrd.get())
@@ -227,6 +300,8 @@ class LoginWindow(tk.Tk):
             LoginWindow(self.smart_sch).mainloop()
 
     def __login__(self):
+        """Attempts to login and displays any errors encountered."""
+
         try:
             self.smart_sch.login(self.inp_s_id.get(), self.inp_pswrd.get())
         except CommonError as e:
@@ -241,6 +316,8 @@ class LoginWindow(tk.Tk):
             MainWindow(self.smart_sch).mainloop()
 
     def __sign_up__(self):
+        """Attempts to sign up and displays any errors encountered."""
+
         try:
             self.smart_sch.sign_up(self.inp_s_id.get(), self.inp_pswrd.get(), self.inp_c_pswrd.get())
         except CommonError as e:
@@ -253,8 +330,16 @@ class LoginWindow(tk.Tk):
 
 
 class MainWindow(tk.Tk):
+    """Displays the main window through which the user can avail most of Smart Scheduler's functionality."""
 
     def __init__(self, smart_sch: SmartScheduler, *args, **kwargs):
+        """
+        Initialises widgets and builds the main window.
+        :param smart_sch: An instance of SmartScheduler to serve as the backend for various functionality.
+        :param args: additional arguments for the tk.Tk superclass
+        :param kwargs: additional keyword arguments for the tk.Tk superclass
+        """
+
         super().__init__(*args, **kwargs)
 
         self.smart_sch = smart_sch
@@ -354,13 +439,22 @@ class MainWindow(tk.Tk):
         self.exit_b.grid(row=1, column=4, **Padding.no_left(y=(0, Padding.DEF_Y)))
 
     def __action__(self, gui_cmd, *args, **kwargs):
+        """
+        Inserts a loading screen before any gui commands are executed.
+        :param gui_cmd: the command to execute
+        :param args: arguments for the command
+        :param kwargs: keyword arguments for the command
+        """
         GUtils.disp_loading(self.loading_win, gui_cmd, *args, **kwargs)
 
     def __rem_loading__(self):
+        """Removes the loading screen after a gui command has finished execution."""
+
         if self.loading_win.winfo_viewable():
             self.loading_win.withdraw()
 
     def __scan_attd__(self):
+        """Displays a window through which user can attempt to scan a QR code. Any errors encountered are displayed."""
 
         def scan_qr():
             scan_l.configure(text="Scanning...")
@@ -382,6 +476,8 @@ class MainWindow(tk.Tk):
         scan_win.mainloop()
 
     def __open_c_class__(self):
+        """Attempts to open the current class link in a browser and displays any errors encountered."""
+
         try:
             if self.smart_sch.curr_class_link is not None:
                 Utils.open_class_link(self.smart_sch.curr_class_link)
@@ -397,6 +493,8 @@ class MainWindow(tk.Tk):
                 GUtils.disp_msg("Could not open class link.\n" + e.args[0], "err", self)
 
     def __edit_subs__(self):
+        """Attempts to open a new window to edit registered subjects and displays any errors encountered."""
+
         try:
             SubjectEditor(self.smart_sch, self.__refresh_sch__)
             self.__rem_loading__()
@@ -409,6 +507,8 @@ class MainWindow(tk.Tk):
                 GUtils.disp_msg("Could not retrieve registered subjects info.\n" + e.args[0], "err", self)
 
     def __del_acct__(self):
+        """Attempts to delete currently logged in account and displays any errors encountered."""
+
         if GUtils.disp_conf("Delete Account", "Are you sure you want to delete your account and all of its data?\n"
                                               "This action is irreversible.", self):
             try:
@@ -425,6 +525,8 @@ class MainWindow(tk.Tk):
                 self.__logout__()
 
     def __refresh__(self):
+        """Attempts to refresh class and schedule information and displays any errors encountered."""
+
         try:
             schedule = Schedule(self.smart_sch)
             curr_class, next_class = schedule.get_class_info()
@@ -445,6 +547,11 @@ class MainWindow(tk.Tk):
                 GUtils.disp_msg("Could not refresh class info.\n" + e.args[0], "err", self)
 
     def __refresh_sch__(self, refresh_info=True):
+        """
+        Attempts to refresh schedule information and displays any errors encountered.
+        :param refresh_info: optional, calls self.__refresh__() if true
+        """
+
         try:
             new_schedule_n = ScheduleEditor(self.smart_sch).build_schedule(self.schedule_n)
             self.__rem_loading__()
@@ -464,6 +571,8 @@ class MainWindow(tk.Tk):
                 self.__refresh__()
 
     def __edit_sch__(self):
+        """Attempts to open a new window to edit schedule and displays any errors encountered."""
+
         try:
             ScheduleEditor(self.smart_sch, refresh_func=self.__refresh_sch__)
             self.__rem_loading__()
@@ -477,6 +586,14 @@ class MainWindow(tk.Tk):
                 GUtils.disp_msg("Could not retrieve schedule info.\n" + e.args[0], "err", self)
 
     def __logout__(self, exit_prog=False):
+        """
+        Attempts to logout.
+
+        Any encountered errors are suppressed. Either The main window is destroyed and the login window is displayed,
+        or the application exits completely.
+        :param exit_prog: optional, the application will exit instead of displaying the login window if true.
+        """
+
         try:
             self.smart_sch.logout()
         except CommonError as e:
@@ -490,12 +607,23 @@ class MainWindow(tk.Tk):
                 LoginWindow(self.smart_sch).mainloop()
 
     def terminate(self):
+        """Calls self.__logout__ with the intention of exiting the application."""
+
         self.__logout__(exit_prog=True)
 
 
 class SubjectEditor(tk.Toplevel):
+    """Displays a window for editing registered subjects."""
 
     def __init__(self, smart_sch: SmartScheduler, refresh_schedule_func, *args, **kwargs):
+        """
+        Initialises widgets and builds the registered subjects editor window.
+        :param smart_sch: an instance of SmartScheduler to serve as the backend for editing subjects.
+        :param refresh_schedule_func: external function to refresh schedule in the main window
+        :param args: additional arguments for the tk.TopLevel superclass
+        :param kwargs: additional keyword arguments for the tk.TopLevel superclass
+        """
+
         super().__init__(*args, **kwargs)
         self._refresh_schedule_func = refresh_schedule_func
 
@@ -531,6 +659,8 @@ class SubjectEditor(tk.Toplevel):
         GUtils.lift_win(self)
 
     def disp_subjects(self):
+        """Refreshes list of displayed subjects."""
+
         i = 1
         for sub_f in self.reg_subs_f.winfo_children():
             sub_f.destroy()
@@ -554,6 +684,10 @@ class SubjectEditor(tk.Toplevel):
         GUtils.lift_win(self)
 
     def __reg_sub__(self, edit_reg_code: str = None):
+        """
+        Register a new subject or edit an existing one.
+        :param edit_reg_code: optional, will edit subject corresponding to this registration code if provided
+        """
 
         def __close__():
             inp_w.destroy()
@@ -625,13 +759,29 @@ class SubjectEditor(tk.Toplevel):
         inp_w.geometry("+%d+%d" % GUtils.win_pos(self, 0.35, 0.35))
 
     def __del_sub__(self, reg_code: str):
+        """
+        Delete a subject from registered subjects.
+        :param reg_code: the registration code of the subject to delete
+        """
+
         self._subjects.unregister_subject(reg_code)
         self.disp_subjects()
 
     def __edit_sub__(self, reg_code: str):
+        """
+        Edit a subject from registered subjects.
+        :param reg_code: the registration code of the subject to edit
+        """
+
         self.__reg_sub__(reg_code)
 
     def __upd_subs__(self):
+        """
+        Attempt to update current registered subjects to the database and close subject editor window.
+
+        Refreshes schedule if database is successfully updated.
+        """
+
         if self._subjects.reg_subs_changed():
             try:
                 self._subjects.update_subjects()
@@ -647,9 +797,16 @@ class SubjectEditor(tk.Toplevel):
         self.__close__(check_changed=False)
 
     def __update__(self):
+        """Display a loading window to mask execution of database update function."""
+
         GUtils.disp_loading(GUtils.loading_win(self), self.__upd_subs__)
 
     def __close__(self, check_changed: bool = True):
+        """
+        Optionally warn about changes made to registered subjects and close subject editor window.
+        :param check_changed: optional, will show a warning if registered subjects have been modified
+        """
+
         if self._subjects.reg_subs_changed() and check_changed:
             if GUtils.disp_conf("Exit", "You have unsaved changes, exit?", self):
                 self.destroy()
@@ -658,8 +815,15 @@ class SubjectEditor(tk.Toplevel):
 
 
 class ScheduleEditor:
+    """Rebuilds displayed schedule or displays a window to edit schedule."""
 
     def __init__(self, smart_sch: SmartScheduler, refresh_func=None):
+        """
+        Rebuild displayed schedule or initialise widgets and build window for editing schedule.
+        :param smart_sch: an instance of SmartScheduler to serve as the backend for editing schedule
+        :param refresh_func: external function to refresh schedule in the main window
+        """
+
         self._smart_sch = smart_sch
         self._refresh_func = refresh_func
         self._edit_mode = self._refresh_func is not None
@@ -696,12 +860,16 @@ class ScheduleEditor:
             GUtils.lift_win(self._root)
 
     def __refresh_sch__(self):
+        """Reconstruct schedule widget to reflect any changes made to the schedule."""
+
         self._schedule_n.destroy()
         self._schedule_n = self.build_schedule()
         self._schedule_n.grid(row=1, column=1, sticky="nsew", **Padding.default())
         GUtils.lift_win(self._root)
 
     def __day_layout__(self, classes_: list, day_str_: str, schedule_n: ttk.Notebook):
+        """Build widgets to display each day in the schedule."""
+
         layout_f = tk.Frame(schedule_n)
         if not classes_:
             status_l = tk.Label(layout_f, text=f"No classes on {day_str_}.", **Style.def_txt())
@@ -733,6 +901,10 @@ class ScheduleEditor:
         return layout_f
 
     def __add_class__(self, edit_class: Class = None):
+        """
+        Add a new class to the schedule or optionally edit and existing one.
+        :param edit_class: optional, will edit class corresponding to this Class object if provided
+        """
 
         def close_reg_win():
             inp_w.destroy()
@@ -838,13 +1010,29 @@ class ScheduleEditor:
         inp_w.geometry("+%d+%d" % GUtils.win_pos(self._root, 0.35, 0.35))
 
     def __del_class__(self, class_: Class):
+        """
+        Delete a class from the schedule.
+        :param class_: the Class object to delete
+        """
+
         self._schedule.delete_class(class_)
         self.__refresh_sch__()
 
     def __edit_class(self, edit_class: Class):
+        """
+        Edit a class from the schedule
+        :param edit_class: the Class object to edit
+        """
+
         self.__add_class__(edit_class)
 
     def __upd_sch__(self):
+        """
+        Attempt to update current schedule to database.
+
+        Refreshes schedule if database is successfully updated.
+        """
+
         if self._schedule.schedule_changed():
             try:
                 self._schedule.update_schedule()
@@ -860,9 +1048,16 @@ class ScheduleEditor:
         self.__close__(check_changed=False)
 
     def __update__(self):
+        """Insert a loading window to mask execution of database update function."""
+
         GUtils.disp_loading(GUtils.loading_win(self._root), self.__upd_sch__)
 
     def __close__(self, check_changed=True):
+        """
+        Optionally warn about changes made to schedule and close schedule editor window.
+        :param check_changed: optional, will show a warning if schedule has been modified
+        """
+
         if self._schedule.schedule_changed() and check_changed:
             if GUtils.disp_conf("Exit", "You have unsaved changes, exit?", self._root):
                 self._root.destroy()
@@ -870,6 +1065,12 @@ class ScheduleEditor:
             self._root.destroy()
 
     def build_schedule(self, schedule_n: ttk.Notebook = None) -> ttk.Notebook:
+        """
+        Discard old schedule display widget and return a new, updated schedule display widget.
+        :param schedule_n: the old schedule display widget to discard
+        :return: the new, updated schedule display widget
+        """
+
         new_schedule_n = ttk.Notebook(schedule_n.master if schedule_n is not None else self._main_f)
         for day_str in self._schedule.day_strs:
             classes = self._schedule.dict_schedule[day_str]
@@ -881,6 +1082,13 @@ class ScheduleEditor:
 
 
 def main():
+    """
+    The entry point of the Smart Scheduler Application.
+
+    Any fatal error encountered while initialising the SmartScheduler backend will cause the program to terminate after
+    displaying the error in a pop up dialog box.
+    """
+
     try:
         smart_sch = SmartScheduler()
     except FatalError as e:

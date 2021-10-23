@@ -12,8 +12,8 @@ test/__pycache__/
 build/
 dist/
 
-# .tar builds
-*.tar
+# .tar releases folder
+releases/
 
 # databases
 smartscheduler/**/*.db

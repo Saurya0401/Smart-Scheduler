@@ -15,6 +15,10 @@ dist/
 # .tar releases folder
 releases/
 
+# extra .spec files
+*.spec
+!smartscheduler.spec
+
 # databases
 smartscheduler/**/*.db
 test/**/*.db

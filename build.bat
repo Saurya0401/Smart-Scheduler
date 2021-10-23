@@ -26,7 +26,8 @@ ECHO SmartScheduler.exe placed in dist/
 ECHO ==============================
 ECHO Making SmartScheduler.tar...
 ECHO ==============================
-tar -cvf SmartScheduler.tar -C dist SmartScheduler && (
+if not exist releases mkdir releases
+tar -cvf releases\SmartScheduler.tar -C dist SmartScheduler && (
   ECHO SmartScheduler.tar successfully created.
   (call )
 ) || (

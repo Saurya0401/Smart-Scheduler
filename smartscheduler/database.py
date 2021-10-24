@@ -7,19 +7,17 @@ __all__ = ["SmartSchedulerDB"]
 
 
 class SmartSchedulerDB:
-    """
-    Manages the database for the Smart Scheduler application.
-    """
+    """Manages the database for the Smart Scheduler application."""
 
-    TAB_ACCOUNTS = "accounts"
-    COL_STU_ID = "stu_ID"
-    COL_PAS_HASH = "pass_hash"
-    COL_SESSION_ID = "session_id"
-    COL_SCHEDULE = "db_schedule"
-    COL_SUBJECTS = "subjects"
-    TAB_SUB_INFO = "sub_info"
-    COL_SUB_CODE = "sub_code"
-    COL_SUB_NAME = "sub_name"
+    TAB_ACCOUNTS = "Accounts"
+    COL_STU_ID = "Student_ID"
+    COL_PSWRD_HASH = "Pswrd_hash"
+    COL_SCHEDULE = "Schedule"
+    COL_SUBJECTS = "Reg_subjects"
+    COL_SESSION_ID = "Session_ID"
+    TAB_SUB_INFO = "Subjects"
+    COL_SUB_CODE = "Subject_code"
+    COL_SUB_NAME = "Subject_name"
 
     def __init__(self, db_path: str):
         """
@@ -38,7 +36,7 @@ class SmartSchedulerDB:
         self.__send_cmd__(f'''
         CREATE TABLE IF NOT EXISTS {self.TAB_ACCOUNTS} 
         ({self.COL_STU_ID} text NOT NULL PRIMARY KEY,
-        {self.COL_PAS_HASH} text,
+        {self.COL_PSWRD_HASH} text,
         {self.COL_SCHEDULE} text,
         {self.COL_SUBJECTS} text,
         {self.COL_SESSION_ID} text)

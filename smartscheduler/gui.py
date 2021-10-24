@@ -200,13 +200,6 @@ class LoginWindow(tk.Tk):
         self.loading_win = GUtils.loading_win(self)
         self.loading_win.withdraw()
 
-        if self.action == "login":
-            try:
-                self.smart_sch.update_sub_list()
-            except FatalError as e:
-                GUtils.disp_msg(e.args[0], "err", self)
-                raise SystemExit
-
         self.title(self.action.title())
         self.resizable(False, False)
 

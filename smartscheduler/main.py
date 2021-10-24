@@ -54,6 +54,7 @@ class SmartScheduler:
         self.session_id = None
         self.student_id = None
         self.curr_class_link = None
+        self.update_sub_list()
 
     def __chk_s_id__(self, student_id: str) -> bool:
         """

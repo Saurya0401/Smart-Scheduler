@@ -101,7 +101,7 @@ class Colours:
     """The colours used in the GUI, retrieved from config.ini."""
 
     try:
-        BG, TEXT, INPUT, M_BLUE, M_RED = Utils.colours()
+        BG, TEXT, INPUT, M_BLUE, M_RED = Utils.colours(Utils.DEF_CONFIG_FILE)
     except FatalError as e:
         # todo: replace with default colours instead of exiting
         GUtils.disp_msg(e.args[0], "err", None)
@@ -112,7 +112,7 @@ class Font:
     """The font and font sizes used in the GUI, retrieved from config.ini."""
 
     try:
-        DEF_FAMILY, NORMAL, HEADING, TITLE = Utils.fonts()
+        DEF_FAMILY, NORMAL, HEADING, TITLE = Utils.fonts(Utils.DEF_CONFIG_FILE)
     except FatalError as e:
         # todo: replace with default font and font sizes instead of exiting
         GUtils.disp_msg(e.args[0], "err", None)

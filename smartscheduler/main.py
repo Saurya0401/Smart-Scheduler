@@ -38,13 +38,14 @@ def catch_db_err(db_cmd):
 class SmartScheduler:
     """Contains most of the core logic for the Smart Scheduler application."""
 
-    def __init__(self):
+    def __init__(self, config_file: str = None):
         """
         Initialise instance variables and get the database and subjects file path from the configuration file.
+        :param config_file: path to non default config file (for testing)
         """
 
         try:
-            self.db_path, self.subjects_path = Utils.paths()
+            self.db_path, self.subjects_path = Utils.paths(config_file or Utils.DEF_CONFIG_FILE)
             self.db = SmartSchedulerDB(self.db_path)
         except CommonDatabaseError:
             raise FatalError("Could not access database.")
@@ -77,7 +78,7 @@ class SmartScheduler:
         :return: a boolean to confirm if the passwords match
         """
 
-        pass_hash = self.db.query_account_info(student_id, self.db.COL_PAS_HASH)[0]
+        pass_hash = self.db.query_account_info(student_id, self.db.COL_PSWRD_HASH)[0]
         return pbkdf2_sha256.verify(pswrd, pass_hash)
 
     def __chk_s_in__(self, student_id: str) -> bool:
@@ -176,7 +177,7 @@ class SmartScheduler:
                 raise ValueError("Incorrect old password.")
             if not new_pswrd == conf_pswrd:
                 raise ValueError("Password confirmation failed, please try again.")
-            self.db.update_account_info(student_id, self.db.COL_PAS_HASH, pbkdf2_sha256.hash(new_pswrd))
+            self.db.update_account_info(student_id, self.db.COL_PSWRD_HASH, pbkdf2_sha256.hash(new_pswrd))
         except ValueError as e:
             raise CommonError(e.args[0])
         except CommonDatabaseError as e:
@@ -404,6 +405,9 @@ class Class:
         self.start_time = start
         self.end_time = end
 
+    def __eq__(self, other):
+        return self.class_id == other.class_id
+
     def __repr__(self) -> str:
         return str(self.class_id)
 
@@ -474,9 +478,7 @@ class Schedule:
                 if class_.reg_code in reg_codes:
                     filtered_classes.append(class_)
             self._schedule[day] = filtered_classes
-        # todo: fix self._orig_schedule != self._schedule
         self._orig_schedule = deepcopy(self._schedule)
-        # print(f"(filter) {self._schedule == self._orig_schedule}\n{self._schedule}\n{self._orig_schedule}")
         self.update_schedule()
 
     @property

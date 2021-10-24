@@ -7,6 +7,7 @@ from smartscheduler.utils import Utils
 class UtilsTest(unittest.TestCase):
 
     def setUp(self):
+        self.config_path = "./test/test_config.ini"
         self.test_time_str = "1234"
 
     def test_time_obj(self):
@@ -17,13 +18,17 @@ class UtilsTest(unittest.TestCase):
         sub_time_obj = dt.datetime.strptime("1204", "%H%M").time()
         self.assertEqual(Utils.time_obj(self.test_time_str, 30), sub_time_obj)
 
+    def test_paths(self):
+        test_paths_tuple = ("test/test_server/Test.db", "test/test_server/test_subjects.csv")
+        self.assertEqual(Utils.paths(self.config_path), test_paths_tuple)
+
     def test_colours(self):
-        test_colours_list = ["#f0f0f0", "#000000", "#ffffff", "#0750a4", "#ed1b2f"]
-        self.assertEqual(Utils.colours(), test_colours_list)
+        test_colours_list = ["#111111", "#222222", "#333333", "#444444", "#555555"]
+        self.assertEqual(Utils.colours(self.config_path), test_colours_list)
 
     def test_fonts(self):
-        test_fonts_list = ["Helvetica", ("Helvetica", 10), ("Helvetica", 12), ("Helvetica", 14)]
-        self.assertEqual(Utils.fonts(), test_fonts_list)
+        test_fonts_list = ["Arial", ("Arial", 10), ("Arial", 20), ("Arial", 40)]
+        self.assertEqual(Utils.fonts(self.config_path), test_fonts_list)
 
 
 if __name__ == '__main__':

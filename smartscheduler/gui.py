@@ -385,6 +385,8 @@ class MainWindow(tk.Tk):
         self.sch_for_l = tk.Label(self.sch_info_f, text="Schedule for", **Style.def_txt(justify="right"))
         self.sch_edit_b = tk.Button(self.sch_info_f, text="Edit", **Style.def_btn(),
                                     command=lambda: self.__action__(self.__edit_sch__))
+        self.sch_clear_b = tk.Button(self.sch_info_f, text="Clear", **Style.def_btn(bg=Colours.M_RED),
+                                     command=self.__clear_sch_conf__)
         self.schedule_n = ttk.Notebook(self.right_f)
         self.stu_id_tl = tk.Label(self.sch_info_f, textvariable=self.stu_id, **Style.def_txt())
         self.stu_id_bl = tk.Label(self.logout_f, textvariable=self.stu_id, **Style.def_txt(font=Font.HEADING,
@@ -424,6 +426,7 @@ class MainWindow(tk.Tk):
         self.stu_id_tl.grid(row=1, column=2, **Padding.none())
         self.sch_info_f.grid_columnconfigure(3, weight=2)
         self.sch_edit_b.grid(row=1, column=4, **Padding.none())
+        self.sch_clear_b.grid(row=1, column=5, **Padding.no_right(y=(0, 0)))
         self.right_f.grid_rowconfigure(3, weight=2)
         self.logout_f.grid(row=4, column=1, sticky="nsew", **Padding.no_left())
         self.stu_id_bl.grid(row=1, column=1, **Padding.no_right(y=(0, Padding.DEF_Y)))
@@ -570,13 +573,31 @@ class MainWindow(tk.Tk):
             ScheduleEditor(self.smart_sch, refresh_func=self.__refresh_sch__)
             self.__rem_loading__()
         except CommonError as e:
-            self.loading_win.withdraw()
             if e.message == "logout":
                 GUtils.disp_msg("You have been logged out.", "err", self)
                 self.__logout__()
             else:
                 self.__rem_loading__()
                 GUtils.disp_msg("Could not retrieve schedule info.\n" + e.args[0], "err", self)
+
+    def __clear_sch_conf__(self):
+        """This function is required for displaying the loading window while the schedule is being cleared."""
+        if GUtils.disp_conf("Clear Schedule", "Are you sure you want to clear your schedule and remove all classes?\n"
+                                              "This action is irreversible.", self):
+            self.__action__(self.__clear_sch__)
+
+    def __clear_sch__(self):
+        """Attempts to clear the current schedule and displays any errors encountered."""
+        try:
+            Schedule.clear_schedule(self.smart_sch)
+            self.__refresh__()
+        except CommonError as e:
+            if e.message == "logout":
+                GUtils.disp_msg("You have been logged out.", "err", self)
+                self.__logout__()
+            else:
+                self.__rem_loading__()
+                GUtils.disp_msg("Could not clear schedule.\n" + e.args[0], "err", self)
 
     def __logout__(self, exit_prog=False):
         """

@@ -609,6 +609,12 @@ class Schedule:
         self._smart_sch.update_schedule(self.db_schedule)
 
     @staticmethod
+    def clear_schedule(smart_sch: SmartScheduler):
+        """Clear schedule and update it to the database."""
+
+        smart_sch.update_schedule(Schedule.empty_schedule())
+
+    @staticmethod
     def class_duration(class_: Class) -> str:
         """
         Return the duration of a class.

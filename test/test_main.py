@@ -9,7 +9,7 @@ from smartscheduler.main import SmartScheduler, Subjects, Class, Schedule
 class AccountTest(unittest.TestCase):
 
     def setUp(self):
-        self.smart_sch = SmartScheduler()
+        self.smart_sch = SmartScheduler("./test/test_config.ini")
 
     def test_sign_up(self):
         student_id, pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
@@ -48,7 +48,7 @@ class AccountTest(unittest.TestCase):
 class SubjectsTest(unittest.TestCase):
 
     def setUp(self):
-        self.smart_sch = SmartScheduler()
+        self.smart_sch = SmartScheduler("./test/test_config.ini")
         student_id, pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
         self.smart_sch.sign_up(student_id, pswrd, pswrd)
         self.smart_sch.login(student_id, pswrd)
@@ -117,9 +117,9 @@ class ClassTest(unittest.TestCase):
 class ScheduleTest(unittest.TestCase):
 
     def setUp(self):
-        self.smart_sch = SmartScheduler()
+        self.smart_sch = SmartScheduler("./test/test_config.ini")
         student_id, pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
-        self.test_class_id = "EMT1016_Lecture_Monday_0800_1000"
+        self.test_class_id = "EMT1016_Lecture_Monday_1000_1200"
         self.smart_sch.sign_up(student_id, pswrd, pswrd)
         self.smart_sch.login(student_id, pswrd)
         self.schedule = Schedule(self.smart_sch)
@@ -128,15 +128,15 @@ class ScheduleTest(unittest.TestCase):
         test_dict_sch = self.schedule.empty_schedule()
         self.assertEqual(self.schedule.dict_schedule, test_dict_sch)
 
-    def test_add_class(self):
-        test_class = Class.from_id(self.test_class_id)
+    def test_add_class(self, class_id: str = None):
+        test_class = Class.from_id(class_id or self.test_class_id)
         self.schedule.add_class(test_class)
         self.assertIn(test_class, self.schedule.dict_schedule[test_class.class_day])
         return test_class
 
     def test_edit_class(self):
         test_class = self.test_add_class()
-        edited_class = Class.from_id("EMT1016_Tutorial_Monday_0800_1000")
+        edited_class = Class.from_id("EMT1026_Tutorial_Monday_0800_1000")
         self.schedule.add_class(edited_class, test_class)
         self.assertNotIn(test_class, self.schedule.dict_schedule[test_class.class_day])
         self.assertIn(edited_class, self.schedule.dict_schedule[edited_class.class_day])
@@ -163,12 +163,72 @@ class ScheduleTest(unittest.TestCase):
         self.assertNotEqual(new_schedule, old_schedule)
         self.assertEqual(new_schedule, test_sch)
 
-    def test_class_info(self):
+    def test_class_info_only_curr_class(self):
         self.test_add_class()
-        test_class_info = self.schedule.get_class_info(0, dt.datetime.strptime("0800", "%H%M").time())
+        test_class_info = self.schedule.get_class_info(0, dt.datetime.strptime("0950", "%H%M").time())
         self.assertIsInstance(test_class_info[0], Class)
         self.assertIsNone(test_class_info[1])
         self.assertEqual(test_class_info[0].class_id, self.test_class_id)
+
+    def test_class_info_only_next_class(self):
+        self.test_add_class()
+        test_class_info = self.schedule.get_class_info(0, dt.datetime.strptime("0800", "%H%M").time())
+        self.assertIsNone(test_class_info[0])
+        self.assertIsInstance(test_class_info[1], Class)
+        self.assertEqual(test_class_info[1].class_id, self.test_class_id)
+
+    def test_class_info_curr_and_next_class(self):
+        test_class_2_id = "EEL1116_Tutorial_Monday_0800_1000"
+        self.test_add_class()
+        self.test_add_class(test_class_2_id)
+        test_class_info = self.schedule.get_class_info(0, dt.datetime.strptime("0800", "%H%M").time())
+        self.assertIsInstance(test_class_info[0], Class)
+        self.assertIsInstance(test_class_info[1], Class)
+        self.assertEqual(test_class_info[0].class_id, test_class_2_id)
+        self.assertEqual(test_class_info[1].class_id, self.test_class_id)
+
+    def test_class_info_no_classes(self):
+        test_class_info = self.schedule.get_class_info(0, dt.datetime.strptime("0800", "%H%M").time())
+        self.assertIsNone(test_class_info[0])
+        self.assertIsNone(test_class_info[1])
+
+    def test_filter_classes(self):
+        test_sub_info_1 = {"s_code": "EMT1016", "c_type": "Lecture", "c_link": "link"}
+        test_reg_code_1 = test_sub_info_1["s_code"] + "_" + test_sub_info_1["c_type"]
+        sub = Subjects(self.smart_sch)
+        sub.register_subject(test_sub_info_1)
+        sub.update_subjects()
+        self.test_update_schedule()
+        test_class = Class.from_id(self.test_class_id)
+        self.schedule._reg_subjects = self.smart_sch.get_reg_subjects()
+        self.schedule.__filter__()
+        self.assertIn(test_class.class_id, self.smart_sch.get_schedule()[test_class.class_day])
+        sub.unregister_subject(test_reg_code_1)
+        sub.update_subjects()
+        self.schedule._reg_subjects = self.smart_sch.get_reg_subjects()
+        self.schedule.__filter__()
+        self.assertNotIn(test_class.class_id, self.smart_sch.get_schedule()[test_class.class_day])
+
+    def test_parse_schedule(self):
+        test_sch = {
+            "Monday": [self.test_class_id],
+            "Tuesday": [],
+            "Wednesday": [],
+            "Thursday": [],
+            "Friday": [],
+            "Saturday": [],
+            "Sunday": []
+        }
+        test_parsed_sch = {
+            "Monday": [Class.from_id(self.test_class_id)],
+            "Tuesday": [],
+            "Wednesday": [],
+            "Thursday": [],
+            "Friday": [],
+            "Saturday": [],
+            "Sunday": []
+        }
+        self.assertEqual(test_parsed_sch, self.schedule.__parse__(test_sch))
 
     def tearDown(self):
         remove(self.smart_sch.db_path)

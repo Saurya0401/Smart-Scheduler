@@ -14,6 +14,7 @@ class Utils:
     """Provides utility services to various components of the Smart Scheduler application."""
 
     MEET_LINK: str = "https://meet.google.com/"
+    DEF_CONFIG_FILE: str = "./config.ini"
 
     @staticmethod
     def launch_browser(new_window: bool = True, url: str = "www.google.com"):
@@ -98,34 +99,34 @@ class Utils:
         return dt.datetime.now()
 
     @staticmethod
-    def paths():
+    def paths(config_file):
         """
         Retrieve the paths for the database and the subjects file from the config.ini file.
         :return: a tuple containing the retrieved paths
         """
 
-        paths = Config.get_config("paths")
+        paths = _Config.get_config("paths", config_file)
         return paths["database"], paths["subjects"]
 
     @staticmethod
-    def colours():
+    def colours(config_file):
         """
         Retrieve the hex codes and labels of the colours to be used in the GUI.
         :return: a list of colour hex codes and their corresponding use case labels
         """
 
         c_labels = ["background", "text", "input", "mmu_blue", "mmu_red"]
-        colours = Config.get_config("colours")
+        colours = _Config.get_config("colours", config_file)
         return ["#" + colours[label] for label in c_labels]
 
     @staticmethod
-    def fonts():
+    def fonts(config_file):
         """
         Retrieve the default font family and font family and size pairs to be used in the GUI.
         :return: a list containing the retrieved font specifications
         """
 
-        fonts = Config.get_config("fonts")
+        fonts = _Config.get_config("fonts", config_file)
         def_family = fonts["def_family"]
         return [
             def_family,
@@ -135,24 +136,25 @@ class Utils:
         ]
 
 
-class Config(ConfigParser):
+class _Config(ConfigParser):
 
-    def __init__(self):
+    def __init__(self, config_file: str):
         super().__init__()
-        self.read("config.ini")
+        self.read(config_file)
 
     @classmethod
-    def get_config(cls, section: str):
+    def get_config(cls, section: str, config_file: str):
         """
-        Retrieve specific configuration info from the config.ini file.
+        Retrieve specific configuration info from the given config file.
 
         If there are any errors while retrieving configs, a FatalError is raised which will terminate the application.
-        :param section: the section of config.ini from which configuration details are to be retrieved.
-        :return: a ConfigParser.Section object containing the retrieved configuration details.
+        :param section: the section of config_file from which configuration details are to be retrieved
+        :param config_file: the configuration file path
+        :return: a ConfigParser.Section object containing the retrieved configuration details
         """
 
         try:
-            return cls()[section]
+            return cls(config_file)[section]
         except (KeyError, ConfigError):
             raise FatalError("Configuration file (config.ini) not found or corrupted.")
 

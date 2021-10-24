@@ -269,7 +269,7 @@ class LoginWindow(tk.Tk):
         LoginWindow(self.smart_sch, action=action).mainloop()
 
     def __action__(self):
-        """Inserts a loading screen before any actions are executed."""
+        """Inserts a loading screen and executes a certain action depending on self.__action__."""
 
         if self.action == "login":
             GUtils.disp_loading(self.loading_win, self.__login__)
@@ -365,17 +365,17 @@ class MainWindow(tk.Tk):
         self.scan_attd_b = tk.Button(self.actn_f, text="Scan Attendance", **Style.def_btn(l_btn_sz),
                                      command=self.__scan_attd__)
         self.start_class_b = tk.Button(self.actn_f, text="Start Class", **Style.def_btn(l_btn_sz),
-                                       command=lambda: self.__action__(self.__open_c_class__))
+                                       command=lambda: self.__disp_loading__(self.__open_c_class__))
         self.edit_subs_b = tk.Button(self.actn_f, text="Edit Subjects", **Style.def_btn(l_btn_sz),
-                                     command=lambda: self.__action__(self.__edit_subs__))
+                                     command=lambda: self.__disp_loading__(self.__edit_subs__))
         self.del_acct_b = tk.Button(self.actn_f, text="Delete Account", **Style.def_btn(l_btn_sz, Colours.M_RED),
-                                    command=lambda: self.__action__(self.__del_acct__))
+                                    command=lambda: self.__disp_loading__(self.__del_acct__))
         self.c_name_l = tk.Label(self.c_f, textvariable=self.c_name, width=30, wraplength=300, **Style.def_txt())
         self.c_duration_l = tk.Label(self.c_f, textvariable=self.c_duration, width=30, **Style.def_txt())
         self.n_name_l = tk.Label(self.n_f, textvariable=self.n_name, width=30, wraplength=300, **Style.def_txt())
         self.n_duration_l = tk.Label(self.n_f, textvariable=self.n_duration, width=30, **Style.def_txt())
         self.refresh_b = tk.Button(self.left_f, text="Refresh", **Style.def_btn(l_btn_sz),
-                                   command=lambda: self.__action__(self.__refresh__))
+                                   command=lambda: self.__disp_loading__(self.__refresh__))
 
         # right side widgets
         self.right_f = tk.Frame(self.main_f)
@@ -384,7 +384,7 @@ class MainWindow(tk.Tk):
             self.right_f, text="Currently Logged In:", **Style.def_txt()))
         self.sch_for_l = tk.Label(self.sch_info_f, text="Schedule for", **Style.def_txt(justify="right"))
         self.sch_edit_b = tk.Button(self.sch_info_f, text="Edit", **Style.def_btn(),
-                                    command=lambda: self.__action__(self.__edit_sch__))
+                                    command=lambda: self.__disp_loading__(self.__edit_sch__))
         self.sch_clear_b = tk.Button(self.sch_info_f, text="Clear", **Style.def_btn(bg=Colours.M_RED),
                                      command=self.__clear_sch_conf__)
         self.schedule_n = ttk.Notebook(self.right_f)
@@ -392,7 +392,7 @@ class MainWindow(tk.Tk):
         self.stu_id_bl = tk.Label(self.logout_f, textvariable=self.stu_id, **Style.def_txt(font=Font.HEADING,
                                                                                            fg=Colours.M_BLUE))
         self.logout_b = tk.Button(self.logout_f, text="Logout", **Style.def_btn(),
-                                  command=lambda: self.__action__(self.__logout__))
+                                  command=lambda: self.__disp_loading__(self.__logout__))
         self.exit_b = tk.Button(self.logout_f, text="Exit", **Style.def_btn(bg=Colours.M_RED), command=self.terminate)
 
         self.__build__()
@@ -434,7 +434,7 @@ class MainWindow(tk.Tk):
         self.logout_b.grid(row=1, column=3, **Padding.default(y=(0, Padding.DEF_Y)))
         self.exit_b.grid(row=1, column=4, **Padding.no_left(y=(0, Padding.DEF_Y)))
 
-    def __action__(self, gui_cmd, *args, **kwargs):
+    def __disp_loading__(self, gui_cmd, *args, **kwargs):
         """
         Inserts a loading screen before any gui commands are executed.
         :param gui_cmd: the command to execute
@@ -584,7 +584,7 @@ class MainWindow(tk.Tk):
         """This function is required for displaying the loading window while the schedule is being cleared."""
         if GUtils.disp_conf("Clear Schedule", "Are you sure you want to clear your schedule and remove all classes?\n"
                                               "This action is irreversible.", self):
-            self.__action__(self.__clear_sch__)
+            self.__disp_loading__(self.__clear_sch__)
 
     def __clear_sch__(self):
         """Attempts to clear the current schedule and displays any errors encountered."""

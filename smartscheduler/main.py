@@ -576,7 +576,6 @@ class Schedule:
             return None, None
         for cls_ind in range(len(day_sch)):
             c_cls: Class = day_sch[cls_ind]
-            # todo: fix time subtraction bug
             c_st: dt.time = Utils.time_obj(c_cls.start_time, 15)
             c_et: dt.time = Utils.time_obj(c_cls.end_time)
             n_cls: Class = day_sch[cls_ind + 1] if cls_ind + 1 < len(day_sch) else None

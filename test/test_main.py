@@ -4,23 +4,39 @@ from os import remove
 from random import randint
 
 from smartscheduler.main import SmartScheduler, Subjects, Class, Schedule
+from smartscheduler.exceptions import CommonError
 
 
 class AccountTest(unittest.TestCase):
 
     def setUp(self):
         self.smart_sch = SmartScheduler("./test/test_config.ini")
+        self.unregistered_id = str(randint(10**9, 10**10 - 1))
+        self.invalid_ids = ["", str(randint(10**8, 10**9 - 1)), "abcde12345"]
 
     def test_sign_up(self):
         student_id, pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
+        registered_id = student_id
+        wrong_pswrd = pswrd.upper()
         self.smart_sch.sign_up(student_id, pswrd, pswrd)
         self.assertEqual(self.smart_sch.__chk_s_id__(student_id), True)
+        for i in self.invalid_ids:
+            self.assertRaises(CommonError, self.smart_sch.sign_up, i, pswrd, pswrd)
+        self.assertRaises(CommonError, self.smart_sch.sign_up, registered_id, pswrd, pswrd)
+        self.assertRaises(CommonError, self.smart_sch.sign_up, self.unregistered_id, pswrd, wrong_pswrd)
         return student_id, pswrd
 
     def test_login(self):
         student_id, pswrd = self.test_sign_up()
+        duplicate_id = student_id
+        wrong_pswrd = pswrd.upper()
         self.smart_sch.login(student_id, pswrd)
         self.assertEqual(self.smart_sch.__logged_in__(student_id), True)
+        for i in self.invalid_ids:
+            self.assertRaises(CommonError, self.smart_sch.login, i, pswrd)
+        self.assertRaises(CommonError, self.smart_sch.login, self.unregistered_id, pswrd)
+        self.assertRaises(CommonError, self.smart_sch.login, student_id, wrong_pswrd)
+        self.assertRaises(CommonError, self.smart_sch.login, duplicate_id, pswrd)
 
     def test_logout(self):
         student_id, pswrd = self.test_sign_up()
@@ -30,10 +46,17 @@ class AccountTest(unittest.TestCase):
 
     def test_change_pswrd(self):
         student_id, pswrd = self.test_sign_up()
+        wrong_pswrd = pswrd.upper()
         new_pswrd = "new_test_password"
+        wrong_new_pswrd = "password_test_new"
         self.smart_sch.change_pswrd(student_id, pswrd, new_pswrd, new_pswrd)
         self.smart_sch.login(student_id, new_pswrd)
         self.assertEqual(self.smart_sch.__logged_in__(student_id), True)
+        for i in self.invalid_ids:
+            self.assertRaises(CommonError, self.smart_sch.change_pswrd, i, pswrd, new_pswrd, new_pswrd)
+        self.assertRaises(CommonError, self.smart_sch.change_pswrd, self.unregistered_id, pswrd, new_pswrd, new_pswrd)
+        self.assertRaises(CommonError, self.smart_sch.change_pswrd, student_id, wrong_pswrd, new_pswrd, new_pswrd)
+        self.assertRaises(CommonError, self.smart_sch.change_pswrd, student_id, pswrd, new_pswrd, wrong_new_pswrd)
 
     def test_del_acct(self):
         student_id, pswrd = self.test_sign_up()
@@ -54,6 +77,11 @@ class SubjectsTest(unittest.TestCase):
         self.smart_sch.login(student_id, pswrd)
         self.subjects = Subjects(self.smart_sch)
 
+    def test_get_reg_subjects(self):
+        self.assertEqual(self.smart_sch.get_reg_subjects(), {})
+        self.smart_sch.logout(self.smart_sch.student_id)
+        self.assertRaises(CommonError, self.smart_sch.get_reg_subjects)
+
     def test_register_subject(self):
         test_reg_info = {
             "s_code": "EMT1016",
@@ -64,6 +92,7 @@ class SubjectsTest(unittest.TestCase):
         self.subjects.register_subject(test_reg_info)
         self.assertIn(test_reg_code, self.subjects.reg_subjects.keys())
         self.assertEqual(self.subjects.reg_subjects[test_reg_code], test_reg_info["c_link"])
+        self.assertRaises(CommonError, self.subjects.register_subject, test_reg_info)
         return test_reg_code
 
     def test_edit_subject(self):
@@ -90,6 +119,8 @@ class SubjectsTest(unittest.TestCase):
         self.subjects.update_subjects()
         new_reg_subjects = self.smart_sch.get_reg_subjects()
         self.assertNotEqual(old_reg_subjects, new_reg_subjects)
+        self.smart_sch.logout(remote_student_id=self.smart_sch.student_id)
+        self.assertRaises(CommonError, self.subjects.update_subjects)
 
     def tearDown(self):
         remove(self.smart_sch.db_path)
@@ -118,11 +149,16 @@ class ScheduleTest(unittest.TestCase):
 
     def setUp(self):
         self.smart_sch = SmartScheduler("./test/test_config.ini")
-        student_id, pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
+        self.student_id, self.pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
         self.test_class_id = "EMT1016_Lecture_Monday_1000_1200"
-        self.smart_sch.sign_up(student_id, pswrd, pswrd)
-        self.smart_sch.login(student_id, pswrd)
+        self.smart_sch.sign_up(self.student_id, self.pswrd, self.pswrd)
+        self.smart_sch.login(self.student_id, self.pswrd)
         self.schedule = Schedule(self.smart_sch)
+
+    def test_get_schedule(self):
+        self.assertEqual(self.smart_sch.get_schedule(), Schedule.empty_schedule())
+        self.smart_sch.logout(self.smart_sch.student_id)
+        self.assertRaises(CommonError, self.smart_sch.get_schedule)
 
     def test_db_schedule(self):
         test_dict_sch = self.schedule.empty_schedule()
@@ -132,6 +168,7 @@ class ScheduleTest(unittest.TestCase):
         test_class = Class.from_id(class_id or self.test_class_id)
         self.schedule.add_class(test_class)
         self.assertIn(test_class, self.schedule.dict_schedule[test_class.class_day])
+        self.assertRaises(CommonError, self.schedule.add_class, test_class)
         return test_class
 
     def test_edit_class(self):
@@ -162,6 +199,9 @@ class ScheduleTest(unittest.TestCase):
         new_schedule = self.smart_sch.get_schedule()
         self.assertNotEqual(new_schedule, old_schedule)
         self.assertEqual(new_schedule, test_sch)
+        self.smart_sch.logout(remote_student_id=self.smart_sch.student_id)
+        self.assertRaises(CommonError, self.schedule.update_schedule)
+        self.smart_sch.login(self.student_id, self.pswrd)
 
     def test_class_info_only_curr_class(self):
         self.test_add_class()
@@ -178,7 +218,7 @@ class ScheduleTest(unittest.TestCase):
         self.assertEqual(test_class_info[1].class_id, self.test_class_id)
 
     def test_class_info_curr_and_next_class(self):
-        test_class_2_id = "EEL1116_Tutorial_Monday_0800_1000"
+        test_class_2_id = "EEL1166_Tutorial_Monday_0800_1000"
         self.test_add_class()
         self.test_add_class(test_class_2_id)
         test_class_info = self.schedule.get_class_info(0, dt.datetime.strptime("0800", "%H%M").time())
@@ -235,6 +275,13 @@ class ScheduleTest(unittest.TestCase):
         self.assertNotEqual(self.smart_sch.get_schedule(), Schedule.empty_schedule())
         self.schedule.clear_schedule(self.smart_sch)
         self.assertEqual(self.smart_sch.get_schedule(), Schedule.empty_schedule())
+
+    def test_update_curr_class_link(self):
+        sub = Subjects(self.smart_sch)
+        sub.register_subject({"s_code": "EMT1016", "c_type": "Lecture", "c_link": "link"})
+        sub.update_subjects()
+        self.schedule.update_curr_class_link(Class.from_id(self.test_class_id))
+        self.assertEqual(self.smart_sch.curr_class_link, "link")
 
     def tearDown(self):
         remove(self.smart_sch.db_path)

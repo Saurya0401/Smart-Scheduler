@@ -9,8 +9,13 @@ from smartscheduler.exceptions import CommonError, FatalError
 
 class SmartSchedulerTest(unittest.TestCase):
 
+    smart_sch = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.smart_sch = SmartScheduler("./test/test_config.ini")
+
     def setUp(self):
-        self.smart_sch = SmartScheduler("./test/test_config.ini")
         self.unregistered_id = str(randint(10**9, 10**10 - 1))
         self.invalid_ids = ["", str(randint(10**8, 10**9 - 1)), "abcde12345"]
 
@@ -76,23 +81,30 @@ class SmartSchedulerTest(unittest.TestCase):
         self.assertEqual(self.smart_sch.db.retrieve_all(self.smart_sch.db.TAB_SUB_INFO), test_subs)
         self.assertRaises(FatalError, lambda: SmartScheduler("wrong/config_file/path").update_sub_list())
 
-    def tearDown(self):
-        remove(self.smart_sch.db_path)
+    @classmethod
+    def tearDownClass(cls):
+        remove(cls.smart_sch.db_path)
 
 
 class SubjectsTest(unittest.TestCase):
 
+    smart_sch = None
+    student_id, pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.smart_sch = SmartScheduler("./test/test_config.ini")
+        cls.smart_sch.sign_up(cls.student_id, cls.pswrd, cls.pswrd)
+        cls.smart_sch.login(cls.student_id, cls.pswrd)
+
     def setUp(self):
-        self.smart_sch = SmartScheduler("./test/test_config.ini")
-        student_id, pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
-        self.smart_sch.sign_up(student_id, pswrd, pswrd)
-        self.smart_sch.login(student_id, pswrd)
         self.subjects = Subjects(self.smart_sch)
 
     def test_get_reg_subjects(self):
         self.assertEqual(self.smart_sch.get_reg_subjects(), {})
         self.smart_sch.logout(self.smart_sch.student_id)
         self.assertRaises(CommonError, self.smart_sch.get_reg_subjects)
+        self.smart_sch.login(self.student_id, self.pswrd)
 
     def test_register_subject(self):
         test_reg_info = {
@@ -134,8 +146,9 @@ class SubjectsTest(unittest.TestCase):
         self.smart_sch.logout(remote_student_id=self.smart_sch.student_id)
         self.assertRaises(CommonError, self.subjects.update_subjects)
 
-    def tearDown(self):
-        remove(self.smart_sch.db_path)
+    @classmethod
+    def tearDownClass(cls):
+        remove(cls.smart_sch.db_path)
 
 
 class ClassTest(unittest.TestCase):
@@ -159,18 +172,24 @@ class ClassTest(unittest.TestCase):
 
 class ScheduleTest(unittest.TestCase):
 
+    smart_sch = None
+    student_id, pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
+    test_class_id = "EMT1016_Lecture_Monday_1000_1200"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.smart_sch = SmartScheduler("./test/test_config.ini")
+        cls.smart_sch.sign_up(cls.student_id, cls.pswrd, cls.pswrd)
+        cls.smart_sch.login(cls.student_id, cls.pswrd)
+
     def setUp(self):
-        self.smart_sch = SmartScheduler("./test/test_config.ini")
-        self.student_id, self.pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
-        self.test_class_id = "EMT1016_Lecture_Monday_1000_1200"
-        self.smart_sch.sign_up(self.student_id, self.pswrd, self.pswrd)
-        self.smart_sch.login(self.student_id, self.pswrd)
         self.schedule = Schedule(self.smart_sch)
 
     def test_get_schedule(self):
         self.assertEqual(self.smart_sch.get_schedule(), Schedule.empty_schedule())
         self.smart_sch.logout(self.smart_sch.student_id)
         self.assertRaises(CommonError, self.smart_sch.get_schedule)
+        self.smart_sch.login(self.student_id, self.pswrd)
 
     def test_db_schedule(self):
         test_dict_sch = self.schedule.empty_schedule()
@@ -295,8 +314,9 @@ class ScheduleTest(unittest.TestCase):
         self.schedule.update_curr_class_link(Class.from_id(self.test_class_id))
         self.assertEqual(self.smart_sch.curr_class_link, "link")
 
-    def tearDown(self):
-        remove(self.smart_sch.db_path)
+    @classmethod
+    def tearDownClass(cls):
+        remove(cls.smart_sch.db_path)
 
 
 if __name__ == '__main__':

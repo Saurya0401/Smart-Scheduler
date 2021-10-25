@@ -9,8 +9,11 @@ from smartscheduler.exceptions import CommonDatabaseError
 
 class DatabaseTest(unittest.TestCase):
 
-    def setUp(self):
-        self.db_path = "./test/test_server/Test.db"
+    db_path = "./test/test_server/Test.db"
+
+    @classmethod
+    def setUpClass(cls):
+        SmartSchedulerDB(cls.db_path)
 
     def test_create_tables(self):
         db = SmartSchedulerDB(self.db_path)
@@ -72,8 +75,9 @@ class DatabaseTest(unittest.TestCase):
         retrieved_data = db.retrieve_all(db.TAB_SUB_INFO)
         self.assertEqual(retrieved_data, test_list)
 
-    def tearDown(self):
-        remove(self.db_path)
+    @classmethod
+    def tearDownClass(cls):
+        remove(cls.db_path)
 
 
 if __name__ == '__main__':

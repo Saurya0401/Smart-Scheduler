@@ -1,5 +1,6 @@
 import datetime as dt
 import unittest
+from os import remove
 
 from smartscheduler.utils import Utils
 from smartscheduler.exceptions import FatalError
@@ -31,16 +32,31 @@ class UtilsTest(unittest.TestCase):
         test_paths_tuple = ("test/test_server/Test.db", "test/test_server/test_subjects.csv")
         self.assertEqual(Utils.paths(self.config_path), test_paths_tuple)
         self.assertRaises(FatalError, Utils.paths, "wrong/config_file/path")
+        empty_config_file = "./test/empty_config.ini"
+        with open(empty_config_file, 'w'):
+            pass
+        self.assertRaises(FatalError, Utils.paths, empty_config_file)
+        remove(empty_config_file)
 
     def test_colours(self):
         test_colours_list = ["#111111", "#222222", "#333333", "#444444", "#555555"]
         self.assertEqual(Utils.colours(self.config_path), test_colours_list)
         self.assertRaises(FatalError, Utils.colours, "wrong/config_file/path")
+        empty_config_file = "./test/empty_config.ini"
+        with open(empty_config_file, 'w'):
+            pass
+        self.assertRaises(FatalError, Utils.colours, empty_config_file)
+        remove(empty_config_file)
 
     def test_fonts(self):
         test_fonts_list = ["Arial", ("Arial", 10), ("Arial", 20), ("Arial", 40)]
         self.assertEqual(Utils.fonts(self.config_path), test_fonts_list)
         self.assertRaises(FatalError, Utils.fonts, "wrong/config_file/path")
+        empty_config_file = "./test/empty_config.ini"
+        with open(empty_config_file, 'w'):
+            pass
+        self.assertRaises(FatalError, Utils.fonts, empty_config_file)
+        remove(empty_config_file)
 
 
 if __name__ == '__main__':

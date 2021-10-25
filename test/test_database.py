@@ -3,6 +3,7 @@ from os import remove
 from random import randint
 
 from smartscheduler.database import SmartSchedulerDB
+from smartscheduler.exceptions import CommonDatabaseError
 
 
 class DatabaseTest(unittest.TestCase):
@@ -17,6 +18,8 @@ class DatabaseTest(unittest.TestCase):
         retrieved_data = [db.query_account_info(test_data[0], query)[0] for query in
                           (db.COL_STU_ID, db.COL_PSWRD_HASH, db.COL_SCHEDULE, db.COL_SUBJECTS)]
         self.assertEqual(retrieved_data, test_data)
+        duplicate_data_cmd = f"INSERT INTO {db.TAB_ACCOUNTS} VALUES ({', '.join(test_data)}, 0)"
+        self.assertRaises(CommonDatabaseError, db.__db_cmd__, duplicate_data_cmd)
         return test_data
 
     def test_upd_one_data(self):
@@ -32,6 +35,9 @@ class DatabaseTest(unittest.TestCase):
         retrieved_data = [db.query_account_info(test_data_id, query)[0] for query in
                           (db.COL_PSWRD_HASH, db.COL_SCHEDULE, db.COL_SUBJECTS)]
         self.assertEqual(retrieved_data, list(updated.values()))
+        invalid_column = "Non_existent_column"
+        update_data_cmd = f"UPDATE {db.TAB_ACCOUNTS} SET {invalid_column}='value' WHERE {db.COL_STU_ID}={test_data_id}"
+        self.assertRaises(CommonDatabaseError, db.__db_cmd__, update_data_cmd)
 
     def test_del_one_data(self):
         db = SmartSchedulerDB(self.db_path)

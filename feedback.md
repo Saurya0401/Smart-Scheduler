@@ -1,6 +1,6 @@
 The following features and changes have been requested, as per the feedback from the client.
 #### Requested features
-- [ ] A button to clear schedule
+- [x] A button to clear schedule
 - [ ] Successful remote logout notification
 - [ ] Default values for fonts and colours in case values can't be retrieved from config file
 - [ ] Schedule editor should display an error if there are no registered subjects

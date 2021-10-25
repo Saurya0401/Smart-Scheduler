@@ -4,10 +4,10 @@ from os import remove
 from random import randint
 
 from smartscheduler.main import SmartScheduler, Subjects, Class, Schedule
-from smartscheduler.exceptions import CommonError
+from smartscheduler.exceptions import CommonError, FatalError
 
 
-class AccountTest(unittest.TestCase):
+class SmartSchedulerTest(unittest.TestCase):
 
     def setUp(self):
         self.smart_sch = SmartScheduler("./test/test_config.ini")
@@ -63,6 +63,18 @@ class AccountTest(unittest.TestCase):
         self.smart_sch.login(student_id, pswrd)
         self.smart_sch.delete_acc()
         self.assertEqual(self.smart_sch.__chk_s_id__(student_id), False)
+
+    def test_update_sub_list(self):
+        test_subs = [
+            ("EMT1016", "Engineering Mathematics I"),
+            ("EEL1166", "Circuit Theory"),
+            ("EEL1176", "Field Theory"),
+            ("EEE1016", "Electronics I"),
+            ("ECE1016", "Computer and Program Design")
+        ]
+        self.smart_sch.update_sub_list()
+        self.assertEqual(self.smart_sch.db.retrieve_all(self.smart_sch.db.TAB_SUB_INFO), test_subs)
+        self.assertRaises(FatalError, lambda: SmartScheduler("wrong/config_file/path").update_sub_list())
 
     def tearDown(self):
         remove(self.smart_sch.db_path)

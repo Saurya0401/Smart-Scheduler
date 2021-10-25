@@ -103,9 +103,12 @@ class Colours:
     try:
         BG, TEXT, INPUT, M_BLUE, M_RED = Utils.colours(Utils.DEF_CONFIG_FILE)
     except FatalError as e:
-        # todo: replace with default colours instead of exiting
-        GUtils.disp_msg(e.args[0], "err", None)
-        raise SystemExit
+        temp = tk.Tk()
+        temp.withdraw()
+        GUtils.disp_msg("Unable to retrieve colour hex codes from config.ini."
+                        "\nSwitching to default values.", "err", temp)
+        BG, TEXT, INPUT, M_BLUE, M_RED = "#f0f0f0", "#000000", "#ffffff", "#0750a4", "#ed1b2f"
+        temp.destroy()
 
 
 class Font:
@@ -114,9 +117,13 @@ class Font:
     try:
         DEF_FAMILY, NORMAL, HEADING, TITLE = Utils.fonts(Utils.DEF_CONFIG_FILE)
     except FatalError as e:
-        # todo: replace with default font and font sizes instead of exiting
-        GUtils.disp_msg(e.args[0], "err", None)
-        raise SystemExit
+        temp = tk.Tk()
+        temp.withdraw()
+        GUtils.disp_msg("Unable to retrieve font family and size values from config.ini."
+                        "\nSwitching to default values.", "err", temp)
+        DEF_FAMILY = "Helvetica"
+        NORMAL, HEADING, TITLE = (DEF_FAMILY, 10), (DEF_FAMILY, 12), (DEF_FAMILY, 14)
+        temp.destroy()
 
 
 class Padding:
@@ -660,7 +667,8 @@ class SubjectEditor(tk.Toplevel):
         self.btn_f = tk.Frame(self.main_f)
         self.reg_sub_b = tk.Button(self.btn_f, text="Register Subject", **Style.def_btn(26),
                                    command=self.__reg_sub__)
-        self.exit_b = tk.Button(self.btn_f, text="Save and Exit", **Style.def_btn(26), command=self.__update__)
+        self.exit_b = tk.Button(self.btn_f, text="Save and Exit", **Style.def_btn(26, bg=Colours.M_RED),
+                                command=self.__update__)
 
         self.main_f.grid(sticky="nsew")
         self.reg_subs_f.grid(row=1, column=1, sticky="nsew", **Padding.default())

@@ -230,6 +230,12 @@ class ScheduleTest(unittest.TestCase):
         }
         self.assertEqual(test_parsed_sch, self.schedule.__parse__(test_sch))
 
+    def test_clear_schedule(self):
+        self.test_update_schedule()
+        self.assertNotEqual(self.smart_sch.get_schedule(), Schedule.empty_schedule())
+        self.schedule.clear_schedule(self.smart_sch)
+        self.assertEqual(self.smart_sch.get_schedule(), Schedule.empty_schedule())
+
     def tearDown(self):
         remove(self.smart_sch.db_path)
 

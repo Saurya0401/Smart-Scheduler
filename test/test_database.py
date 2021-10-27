@@ -7,7 +7,7 @@ from smartscheduler.database import SmartSchedulerDB
 from smartscheduler.exceptions import CommonDatabaseError
 
 
-class DatabaseTest(unittest.TestCase):
+class SmartSchedulerDBTest(unittest.TestCase):
     """TEST A.1"""
 
     db_path = "./test/test_server/Test.db"

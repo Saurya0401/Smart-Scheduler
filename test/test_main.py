@@ -251,9 +251,9 @@ class ScheduleTest(unittest.TestCase):
         self.assertEqual(self.schedule.db_schedule, test_dict_sch)
         self.schedule.delete_class(Class.from_id(self.test_class_id))
 
-    def test_c044_add_class(self, class_id: str = None):
+    def test_c044_add_class(self):
         """TEST_CASE_ID C.4.4"""
-        test_class = Class.from_id(class_id or self.test_class_id)
+        test_class = Class.from_id(self.test_class_id)
         self.schedule.add_class(test_class)
         self.assertIn(test_class, self.schedule.dict_schedule[test_class.class_day])
         self.assertRaises(CommonError, self.schedule.add_class, test_class)

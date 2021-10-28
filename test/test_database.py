@@ -42,8 +42,7 @@ class SmartSchedulerDBTest(unittest.TestCase):
         retrieved_data = [db.query_account_info(test_data[0], query)[0] for query in
                           (db.COL_STU_ID, db.COL_PSWRD_HASH, db.COL_SCHEDULE, db.COL_SUBJECTS)]
         self.assertEqual(retrieved_data, test_data)
-        duplicate_data_cmd = f"INSERT INTO {db.TAB_ACCOUNTS} VALUES ({', '.join(test_data)}, 0)"
-        self.assertRaises(CommonDatabaseError, db.__db_cmd__, duplicate_data_cmd)
+        self.assertRaises(CommonDatabaseError, db.new_account, *test_data)
         return test_data
 
     def test_a13_upd_one_data(self):
@@ -61,8 +60,7 @@ class SmartSchedulerDBTest(unittest.TestCase):
                           (db.COL_PSWRD_HASH, db.COL_SCHEDULE, db.COL_SUBJECTS)]
         self.assertEqual(retrieved_data, list(updated.values()))
         invalid_column = "Non_existent_column"
-        update_data_cmd = f"UPDATE {db.TAB_ACCOUNTS} SET {invalid_column}='value' WHERE {db.COL_STU_ID}={test_data_id}"
-        self.assertRaises(CommonDatabaseError, db.__db_cmd__, update_data_cmd)
+        self.assertRaises(CommonDatabaseError, db.update_account_info, test_data_id, invalid_column, 'value')
 
     def test_a14_del_one_data(self):
         """TEST_CASE_ID A.1.4"""

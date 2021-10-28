@@ -35,7 +35,7 @@ class UtilsTest(unittest.TestCase):
 
     def test_b15_get_paths(self):
         """TEST_CASE_ID B.1.5"""
-        test_paths_tuple = ("test/test_server/Test.db", "test/test_server/test_subjects.csv")
+        test_paths_tuple = ("test/test_server/SmartScheduler.db", "test/test_server/test_subjects.csv")
         self.assertEqual(Utils.paths(self.config_path), test_paths_tuple)
         self.assertRaises(FatalError, Utils.paths, "wrong/config_file/path")
         empty_config_file = "./test/empty_config.ini"

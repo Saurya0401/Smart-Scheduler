@@ -28,6 +28,7 @@ class SmartSchedulerDB:
         self.db_path: str = db_path
         self.db_ret: list = []
         self.db_wait: bool = False
+        self.db_err: str = ""
         self.__create_tables__()
 
     def __create_tables__(self):
@@ -64,7 +65,7 @@ class SmartSchedulerDB:
             curs = conn.cursor()
             curs.execute(cmd, params) if params is not None else curs.execute(cmd)
         except (sql.IntegrityError, sql.OperationalError, sql.ProgrammingError) as e:
-            raise CommonDatabaseError(e.args[0])
+            self.db_err = e.args[0]
         else:
             conn.commit()
             self.db_ret = curs.fetchall()
@@ -80,6 +81,7 @@ class SmartSchedulerDB:
         :param params: optional parameters for the SQL command
         """
 
+        self.db_err = ""
         self.db_wait = True
         Thread(target=self.__db_cmd__, args=(cmd, params)).start()
 
@@ -93,6 +95,8 @@ class SmartSchedulerDB:
         self.__send_cmd__(f"SELECT * FROM {table}")
         while self.db_wait:
             continue
+        if self.db_err:
+            raise CommonDatabaseError(self.db_err)
         return self.db_ret
 
     def new_account(self, s_id: str, pass_hash: str, sch: str, subs: str):
@@ -108,6 +112,8 @@ class SmartSchedulerDB:
                           {"s_id": s_id, "pass_hash": pass_hash, "sch": sch, "subs": subs, "session": "0"})
         while self.db_wait:
             continue
+        if self.db_err:
+            raise CommonDatabaseError(self.db_err)
 
     def query_account_info(self, s_id: str, query_col) -> tuple:
         """
@@ -121,6 +127,8 @@ class SmartSchedulerDB:
                           {"s_id": s_id})
         while self.db_wait:
             continue
+        if self.db_err:
+            raise CommonDatabaseError(self.db_err)
         return self.db_ret[0] if self.db_ret else ()
 
     def update_account_info(self, s_id: str, update_col: str, update_val: str):
@@ -135,6 +143,8 @@ class SmartSchedulerDB:
                           {"s_id": s_id, "val": update_val})
         while self.db_wait:
             continue
+        if self.db_err:
+            raise CommonDatabaseError(self.db_err)
 
     def delete_account(self, s_id: str):
         """
@@ -145,6 +155,8 @@ class SmartSchedulerDB:
         self.__send_cmd__(f"DELETE FROM {self.TAB_ACCOUNTS} WHERE {self.COL_STU_ID}=:s_id", {"s_id": s_id})
         while self.db_wait:
             continue
+        if self.db_err:
+            raise CommonDatabaseError(self.db_err)
 
     def make_subs_list(self, subs_info: list):
         """

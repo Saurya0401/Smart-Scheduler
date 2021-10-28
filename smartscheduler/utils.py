@@ -154,9 +154,15 @@ class _Config(ConfigParser):
         """
 
         try:
-            return cls(config_file)[section]
-        except (KeyError, ConfigError):
+            parser = cls(config_file)
+            if not parser.has_section(section):
+                raise KeyError(f"Configuration for \"{section}\" not located.")
+        except ConfigError:
             raise FatalError("Configuration file (config.ini) not found or corrupted.")
+        except KeyError as e:
+            raise FatalError(e.args[0])
+        else:
+            return parser[section]
 
 
 if __name__ == "__main__":

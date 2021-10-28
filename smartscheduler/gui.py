@@ -308,7 +308,12 @@ class LoginWindow(tk.Tk):
             self.loading_win.withdraw()
             if e.message == "logout":
                 if GUtils.disp_conf("Warning", "You are already logged in through a device, logout now?", self):
-                    self.smart_sch.logout(remote_student_id=self.inp_s_id.get())
+                    try:
+                        self.smart_sch.logout(remote_student_id=self.inp_s_id.get())
+                    except CommonError as e:
+                        GUtils.disp_msg(e.args[0], "err", self)
+                    else:
+                        GUtils.disp_msg("Remote logout successful, you can now login.", "info", self)
             else:
                 GUtils.disp_msg(e.args[0], "err", self)
         else:

@@ -1,9 +1,9 @@
 The following features and changes have been requested, as per the feedback from the client.
 #### Requested features
 - [x] A button to clear schedule
-- [ ] Successful remote logout notification
+- [x] Successful remote logout notification
 - [x] Default values for fonts and colours in case values can't be retrieved from config file
-- [ ] Schedule editor should display an error if there are no registered subjects
+- [x] Schedule editor should display an error if there are no registered subjects
 - [ ] Add a vertical scrollbar to the schedule display widget
 #### Requested changes
 - [ ] Display current day's schedule instead of Monday's schedule when logged in

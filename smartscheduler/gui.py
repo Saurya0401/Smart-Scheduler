@@ -24,8 +24,8 @@ class GUtils:
             return messagebox.showinfo("Info", msg, parent=parent)
         elif msg_t == "err":
             return messagebox.showerror("Error", msg, parent=parent)
-        elif msg_t == "conf":
-            return messagebox.askyesno("Warning", msg, parent=parent)
+        elif msg_t == "warn":
+            return messagebox.showwarning("Warning", msg, parent=parent)
 
     @staticmethod
     def disp_conf(title: str, msg: str, parent: tk.Tk or tk.Toplevel) -> bool:
@@ -106,7 +106,7 @@ class Colours:
         temp = tk.Tk()
         temp.withdraw()
         GUtils.disp_msg("Unable to retrieve colour hex codes from config.ini."
-                        "\nSwitching to default values.", "err", temp)
+                        "\nSwitching to default values.", "warn", temp)
         BG, TEXT, INPUT, M_BLUE, M_RED = "#f0f0f0", "#000000", "#ffffff", "#0750a4", "#ed1b2f"
         temp.destroy()
 
@@ -120,7 +120,7 @@ class Font:
         temp = tk.Tk()
         temp.withdraw()
         GUtils.disp_msg("Unable to retrieve font family and size values from config.ini."
-                        "\nSwitching to default values.", "err", temp)
+                        "\nSwitching to default values.", "warn", temp)
         DEF_FAMILY = "Helvetica"
         NORMAL, HEADING, TITLE = (DEF_FAMILY, 10), (DEF_FAMILY, 12), (DEF_FAMILY, 14)
         temp.destroy()

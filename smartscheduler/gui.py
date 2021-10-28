@@ -493,12 +493,8 @@ class MainWindow(tk.Tk):
                 GUtils.disp_msg("No class right now.", "info", self)
             self.__rem_loading__()
         except CommonError as e:
-            if e.flag == "l_out":
-                GUtils.disp_msg("You have been logged out.", "err", self)
-                self.__logout__()
-            else:
-                self.__rem_loading__()
-                GUtils.disp_msg("Could not open class link.\n" + e.message, "err", self)
+            self.__rem_loading__()
+            GUtils.disp_msg("Could not open class link.\n" + e.args[0], "err", self)
 
     def __edit_subs__(self):
         """Attempts to open a new window to edit registered subjects and displays any errors encountered."""
@@ -588,6 +584,9 @@ class MainWindow(tk.Tk):
             if e.flag == "l_out":
                 GUtils.disp_msg("You have been logged out.", "err", self)
                 self.__logout__()
+            elif e.flag == "no_subs":
+                self.__rem_loading__()
+                GUtils.disp_msg("You must register a subject before you can edit the schedule.", "info", self)
             else:
                 self.__rem_loading__()
                 GUtils.disp_msg("Could not retrieve schedule info.\n" + e.args[0], "err", self)
@@ -863,6 +862,8 @@ class ScheduleEditor:
         self._reg_subs = self._smart_sch.get_reg_subjects()
 
         if self._edit_mode:
+            if not self._reg_subs:
+                raise CommonError(flag="no_subs")
             self._root = tk.Toplevel()
             self._root.title("Edit Schedule")
             self._root.resizable(False, False)

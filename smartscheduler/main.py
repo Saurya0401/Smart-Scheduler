@@ -46,11 +46,13 @@ class SmartScheduler:
 
         try:
             self.db_path, self.subjects_path = Utils.paths(config_file or Utils.DEF_CONFIG_FILE)
+            if self.db_path.split("/")[-1] != "SmartScheduler.db":
+                raise CommonError("Database not found.")
             self.db = SmartSchedulerDB(self.db_path)
         except CommonDatabaseError:
             raise FatalError("Could not access database.")
         except CommonError as e:
-            raise FatalError(e.args[0])
+            raise FatalError(e.message)
         self.session_id = None
         self.student_id = None
         self.curr_class_link = None

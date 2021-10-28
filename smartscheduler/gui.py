@@ -306,8 +306,8 @@ class LoginWindow(tk.Tk):
             self.smart_sch.login(self.inp_s_id.get(), self.inp_pswrd.get())
         except CommonError as e:
             self.loading_win.withdraw()
-            if e.message == "logout":
-                if GUtils.disp_conf("Warning", "You are already logged in through a device, logout now?", self):
+            if e.flag == "l_in":
+                if GUtils.disp_conf("Warning", f"{e.message} Logout now?", self):
                     try:
                         self.smart_sch.logout(remote_student_id=self.inp_s_id.get())
                     except CommonError as e:
@@ -493,12 +493,12 @@ class MainWindow(tk.Tk):
                 GUtils.disp_msg("No class right now.", "info", self)
             self.__rem_loading__()
         except CommonError as e:
-            if e.message == "logout":
+            if e.flag == "l_out":
                 GUtils.disp_msg("You have been logged out.", "err", self)
                 self.__logout__()
             else:
                 self.__rem_loading__()
-                GUtils.disp_msg("Could not open class link.\n" + e.args[0], "err", self)
+                GUtils.disp_msg("Could not open class link.\n" + e.message, "err", self)
 
     def __edit_subs__(self):
         """Attempts to open a new window to edit registered subjects and displays any errors encountered."""
@@ -507,7 +507,7 @@ class MainWindow(tk.Tk):
             SubjectEditor(self.smart_sch, self.__refresh_sch__)
             self.__rem_loading__()
         except CommonError as e:
-            if e.message == "logout":
+            if e.flag == "l_out":
                 GUtils.disp_msg("You have been logged out.", "err", self)
                 self.__logout__()
             else:
@@ -523,7 +523,7 @@ class MainWindow(tk.Tk):
                 self.smart_sch.delete_acc()
                 self.__rem_loading__()
             except CommonError as e:
-                if e.message == "logout":
+                if e.flag == "l_out":
                     GUtils.disp_msg("You have been logged out.", "err", self)
                     self.__logout__()
                 else:
@@ -547,7 +547,7 @@ class MainWindow(tk.Tk):
             self.__refresh_sch__(refresh_info=False)
             self.__rem_loading__()
         except CommonError as e:
-            if e.message == "logout":
+            if e.flag == "l_out":
                 GUtils.disp_msg("You have been logged out.", "err", self)
                 self.__logout__()
             else:
@@ -564,7 +564,7 @@ class MainWindow(tk.Tk):
             new_schedule_n = ScheduleEditor(self.smart_sch).build_schedule(self.schedule_n)
             self.__rem_loading__()
         except CommonError as e:
-            if e.message == "logout":
+            if e.flag == "l_out":
                 GUtils.disp_msg("You have been logged out.", "err", self)
                 self.__logout__()
             else:
@@ -585,7 +585,7 @@ class MainWindow(tk.Tk):
             ScheduleEditor(self.smart_sch, refresh_func=self.__refresh_sch__)
             self.__rem_loading__()
         except CommonError as e:
-            if e.message == "logout":
+            if e.flag == "l_out":
                 GUtils.disp_msg("You have been logged out.", "err", self)
                 self.__logout__()
             else:
@@ -604,7 +604,7 @@ class MainWindow(tk.Tk):
             Schedule.clear_schedule(self.smart_sch)
             self.__refresh__()
         except CommonError as e:
-            if e.message == "logout":
+            if e.flag == "l_out":
                 GUtils.disp_msg("You have been logged out.", "err", self)
                 self.__logout__()
             else:
@@ -813,7 +813,7 @@ class SubjectEditor(tk.Toplevel):
             try:
                 self._subjects.update_subjects()
             except CommonError as e:
-                if e.message == "logout":
+                if e.flag == "l_out":
                     GUtils.disp_msg("You have been logged out.", "err", self)
                     self.__close__(check_changed=False)
                 else:
@@ -981,7 +981,7 @@ class ScheduleEditor:
             disp_subs = {self._schedule.get_class_name(reg_code=reg_code): reg_code for reg_code in
                          self._smart_sch.get_reg_subjects().keys()}
         except CommonError as e:
-            if e.message == "logout":
+            if e.flag == "l_out":
                 GUtils.disp_msg("You have been logged out.", "err", self)
                 close_reg_win()
                 self.__close__(check_changed=False)
@@ -1064,7 +1064,7 @@ class ScheduleEditor:
             try:
                 self._schedule.update_schedule()
             except CommonError as e:
-                if e.message == "logout":
+                if e.flag == "l_out":
                     GUtils.disp_msg("You have been logged out.", "err", self)
                     self.__close__(check_changed=False)
                 else:

@@ -1,8 +1,8 @@
 class CommonError(Exception):
 
-    def __init__(self, message, instr=None):
+    def __init__(self, message="Unknown error.", flag=None):
         self.message = message
-        self.instr = instr
+        self.flag = flag
         super().__init__("Error: " + self.message)
 
 

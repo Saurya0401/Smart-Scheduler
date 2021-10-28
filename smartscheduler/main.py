@@ -128,7 +128,7 @@ class SmartScheduler:
             if not self.__chk_pswrd__(student_id, pswrd):
                 raise ValueError("Incorrect password.")
             if not self.__chk_s_in__(student_id):
-                raise CommonError("logout")
+                raise CommonError("This account is already logged in through a device.", flag="l_in")
         except ValueError as e:
             raise CommonError(e.args[0])
         except CommonDatabaseError as e:
@@ -217,7 +217,7 @@ class SmartScheduler:
         """
 
         if not self.__logged_in__(self.student_id):
-            raise CommonError("logout")
+            raise CommonError(flag="l_out")
         self.db.delete_account(self.student_id)
 
     @catch_db_err
@@ -231,7 +231,7 @@ class SmartScheduler:
         """
 
         if not self.__logged_in__(self.student_id):
-            raise CommonError("logout")
+            raise CommonError(flag="l_out")
         return literal_eval(self.db.query_account_info(self.student_id, self.db.COL_SCHEDULE)[0])
 
     @catch_db_err
@@ -245,7 +245,7 @@ class SmartScheduler:
         """
 
         if not self.__logged_in__(self.student_id):
-            raise CommonError("logout")
+            raise CommonError(flag="l_out")
         return literal_eval(self.db.query_account_info(self.student_id, self.db.COL_SUBJECTS)[0])
 
     def get_class_link(self, reg_code: str) -> str:
@@ -268,7 +268,7 @@ class SmartScheduler:
         """
 
         if not self.__logged_in__(self.student_id):
-            raise CommonError("logout")
+            raise CommonError(flag="l_out")
         self.db.update_account_info(self.student_id, self.db.COL_SUBJECTS, str(new_subs))
 
     @catch_db_err
@@ -282,7 +282,7 @@ class SmartScheduler:
         """
 
         if not self.__logged_in__(self.student_id):
-            raise CommonError("logout")
+            raise CommonError(flag="l_out")
         self.db.update_account_info(self.student_id, self.db.COL_SCHEDULE, str(new_sch))
 
     @catch_db_err

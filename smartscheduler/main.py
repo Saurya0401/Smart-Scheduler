@@ -248,15 +248,6 @@ class SmartScheduler:
             raise CommonError(flag="l_out")
         return literal_eval(self.db.query_account_info(self.student_id, self.db.COL_SUBJECTS)[0])
 
-    def get_class_link(self, reg_code: str) -> str:
-        """
-        Get the class link given the class's registration code.
-        :param reg_code: the class's registration code
-        :return: the class link as a string
-        """
-
-        return self.get_reg_subjects()[reg_code]
-
     @catch_db_err
     def update_reg_subjects(self, new_subs: dict):
         """
@@ -295,13 +286,13 @@ class SmartScheduler:
         subs_info: list = self.db.retrieve_all(self.db.TAB_SUB_INFO)
         return {info[0]: info[1] for info in subs_info}
 
-    def update_curr_link(self, reg_code: str):
+    def update_curr_link(self, class_link: str):
         """
         Store the link of the current class corresponding to reg_code.
-        :param reg_code: the registration code of the current class
+        :param class_link: the current class's link
         """
 
-        self.curr_class_link = self.get_class_link(reg_code)
+        self.curr_class_link = class_link
 
     def update_sub_list(self):
         """
@@ -602,7 +593,7 @@ class Schedule:
         """
 
         if curr_class:
-            self._smart_sch.update_curr_link(curr_class.reg_code)
+            self._smart_sch.update_curr_link(self._reg_subjects[curr_class.reg_code])
 
     def update_schedule(self):
         """Update the current schedule to the database."""

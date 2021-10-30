@@ -361,6 +361,7 @@ class ScheduleTest(unittest.TestCase):
         sub.register_subject({"s_code": "EMT1016", "c_type": "Lecture", "c_link": "test_link"})
         sub.update_subjects()
         test_class_1 = Class.from_id("EMT1016_Lecture_Monday_1200_1400")
+        self.schedule._reg_subjects = self.smart_sch.get_reg_subjects()
         self.schedule.add_class(test_class_1)
         test_class_info = self.schedule.get_class_info(0, dt.datetime.strptime("1200", "%H%M").time())
         self.schedule.update_curr_class_link(test_class_info[0])

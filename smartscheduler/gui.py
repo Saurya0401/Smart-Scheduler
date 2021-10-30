@@ -189,19 +189,492 @@ class Style:
         return {"values": values, "textvariable": textvariable, "width": width, "state": "readonly"}
 
 
+class SubjectEditor(tk.Toplevel):
+    """Displays a window for editing registered subjects."""
+
+    def __init__(self, smart_sch: SmartScheduler, refresh_func):
+        """
+        Initialises widgets and builds the registered subjects editor window.
+        :param smart_sch: an instance of SmartScheduler to serve as the backend for editing subjects
+        :param refresh_func: external function to refresh schedule and class information
+        """
+
+        super().__init__()
+        self._refresh_f = refresh_func
+
+        try:
+            self._subjects = Subjects(smart_sch)
+        except CommonError:
+            self.withdraw()
+            raise
+
+        self._subjects_list = {sub_code: f"{sub_code} - {sub_name}" for sub_code, sub_name in
+                               self._subjects.subjects_info.items()}
+
+        self.title("Edit Subjects")
+        self.resizable(False, False)
+        self.protocol("WM_DELETE_WINDOW", self.__close__)
+
+        self.main_f = tk.Frame(self)
+        self.reg_subs_f = tk.LabelFrame(self.main_f, relief=tk.GROOVE, labelanchor='n', bd=1, labelwidget=tk.Label(
+            self.main_f, text="Registered Subjects", **Style.def_txt(Font.HEADING, Colours.M_BLUE)))
+        self.btn_f = tk.Frame(self.main_f)
+        self.reg_sub_b = tk.Button(self.btn_f, text="Register Subject", **Style.def_btn(26),
+                                   command=self.__reg_sub__)
+        self.exit_b = tk.Button(self.btn_f, text="Save and Exit", **Style.def_btn(26, bg=Colours.M_RED),
+                                command=self.__update__)
+
+        self.main_f.grid(sticky="nsew")
+        self.reg_subs_f.grid(row=1, column=1, sticky="nsew", **Padding.default())
+        self.btn_f.grid(row=2, column=1, sticky="nsew")
+        self.btn_f.grid_columnconfigure(2, weight=10)
+        self.reg_sub_b.grid(row=1, column=1, **Padding.col_elem())
+        self.exit_b.grid(row=1, column=3, **Padding.col_elem())
+        self.disp_subjects()
+        self.geometry("+%d+%d" % GUtils.win_pos(self, 0.35, 0.35))
+        GUtils.lift_win(self)
+
+    @property
+    def reg_subs_changed(self) -> bool:
+        return self._subjects.reg_subs_changed()
+
+    def disp_subjects(self):
+        """Refreshes list of displayed subjects."""
+
+        i = 1
+        for sub_f in self.reg_subs_f.winfo_children():
+            sub_f.destroy()
+        if not self._subjects.reg_subjects:
+            no_sub_l = tk.Label(self.reg_subs_f, text="No registered subjects.", **Style.def_txt())
+            return no_sub_l.grid(sticky="nsew", **Padding.default())
+        for reg_code in self._subjects.reg_subjects.keys():
+            sub_f = tk.Frame(self.reg_subs_f)
+            sub_name_l = tk.Label(sub_f, text=self._subjects.subject_name(reg_code), anchor="w", width=30,
+                                  wraplength=300, **Style.def_txt())
+            sub_edit_b = tk.Button(sub_f, text="Edit", **Style.def_btn(),
+                                   command=lambda rc=reg_code: self.__edit_sub__(rc))
+            sub_del_b = tk.Button(sub_f, text="Delete", **Style.def_btn(bg=Colours.M_RED),
+                                  command=lambda rc=reg_code: self.__del_sub__(rc))
+            sub_f.grid(row=i, column=1, sticky="nsew", **Padding.pad((0, (Padding.DEF_Y if i == 1 else 0, 0))))
+            sub_f.grid_columnconfigure(2, weight=10)
+            sub_name_l.grid(row=1, column=1, sticky="nsew", **Padding.col_elem())
+            sub_edit_b.grid(row=1, column=3, sticky="e", **Padding.col_elem())
+            sub_del_b.grid(row=1, column=4, sticky="e", **Padding.btm_right())
+            i += 1
+        GUtils.lift_win(self)
+
+    def __reg_sub__(self, edit_reg_code: str = None):
+        """
+        Register a new subject or edit an existing one.
+        :param edit_reg_code: optional, will edit subject corresponding to this registration code if provided
+        """
+
+        def __close__():
+            inp_w.destroy()
+            GUtils.lift_win(self)
+
+        def __register__():
+            s_name: str = sub_sel.get()
+            c_type: str = class_type.get()
+            c_link: str = class_link.get()
+            try:
+                if not s_name:
+                    raise CommonError("Please choose a subject.")
+                elif not c_type:
+                    raise CommonError("Please choose a class type.")
+                elif not c_link:
+                    raise CommonError("Class link cannot be empty.")
+                sub_code: str = s_name.split(" - ")[0]
+                old_reg_code: str = edit_reg_code
+                self._subjects.register_subject({
+                    "s_code": sub_code,
+                    "c_type": c_type,
+                    "c_link": c_link,
+                }, old_reg_code=old_reg_code)
+            except CommonError as e:
+                error: str = e.args[0]
+                error_l = tk.Label(inp_f, text=error, **Style.def_txt(fg=Colours.M_RED))
+                error_l.grid(row=1, column=1, sticky="w", **Padding.pad((Padding.DEF_X, (Padding.DEF_Y, 0))))
+            else:
+                inp_w.destroy()
+                return self.disp_subjects()
+
+        init_s_code, init_c_type = self._subjects.sub_code_and_type(edit_reg_code) \
+            if edit_reg_code is not None else (None, "Lecture")
+        init_s_name = self._subjects_list[init_s_code] if init_s_code is not None else ""
+        init_c_link = self._subjects.reg_subjects[edit_reg_code] if edit_reg_code is not None else ""
+        inp_w = tk.Toplevel(self)
+        inp_w.protocol("WM_DELETE_WINDOW", __close__)
+        inp_f = tk.Frame(inp_w)
+        sub_sel = tk.StringVar(inp_f)
+        class_type = tk.StringVar(inp_f, init_c_type)
+        class_link = tk.StringVar(inp_f, init_c_link)
+        sub_l = tk.Label(inp_f, text="Choose subject:", **Style.def_txt())
+        sub_c = ttk.Combobox(inp_f, values=list(self._subjects_list.values()), textvariable=sub_sel, width=55,
+                             state="readonly")
+        if init_s_name:
+            sub_c.set(init_s_name)
+        class_type_f = tk.LabelFrame(inp_f, relief=tk.GROOVE, bd=2, labelwidget=tk.Label(
+            inp_f, text="Class type:", **Style.def_txt()))
+        lec_c = tk.Radiobutton(class_type_f, text="Lecture", **Style.def_txt(), value="Lecture", variable=class_type)
+        tut_c = tk.Radiobutton(class_type_f, text="Tutorial", **Style.def_txt(), value="Tutorial", variable=class_type)
+        class_link_f = tk.LabelFrame(inp_f, relief=tk.GROOVE, bd=2, labelwidget=tk.Label(
+            inp_f, text="Class link:", **Style.def_txt()))
+        class_link_l = tk.Label(class_link_f, text=Utils.MEET_LINK, **Style.def_txt(fg=Colours.M_BLUE))
+        class_link_e = tk.Entry(class_link_f, textvariable=class_link)
+        submit_b = tk.Button(inp_f, text="Submit", **Style.def_btn(), command=__register__)
+
+        inp_f.grid(sticky="nsew")
+        sub_l.grid(row=2, column=1, **Padding.default(), sticky="w")
+        sub_c.grid(row=3, column=1, **Padding.col_elem())
+        class_type_f.grid(row=4, column=1, sticky="nsew", **Padding.col_elem())
+        lec_c.grid(row=1, column=1, **Padding.default())
+        tut_c.grid(row=1, column=2, **Padding.default())
+        class_link_f.grid(row=5, column=1, sticky="nsew", **Padding.col_elem())
+        class_link_l.grid(row=1, column=1, **Padding.default())
+        class_link_e.grid(row=1, column=2, **Padding.no_left())
+        submit_b.grid(row=6, column=1, **Padding.col_elem())
+
+        GUtils.lift_win(inp_w)
+        inp_w.geometry("+%d+%d" % GUtils.win_pos(self, 0.35, 0.35))
+
+    def __del_sub__(self, reg_code: str):
+        """
+        Delete a subject from registered subjects.
+        :param reg_code: the registration code of the subject to delete
+        """
+
+        self._subjects.unregister_subject(reg_code)
+        self.disp_subjects()
+
+    def __edit_sub__(self, reg_code: str):
+        """
+        Edit a subject from registered subjects.
+        :param reg_code: the registration code of the subject to edit
+        """
+
+        self.__reg_sub__(reg_code)
+
+    def __upd_subs__(self):
+        """
+        Attempt to update current registered subjects to the database and close subject editor window.
+
+        Refreshes schedule if database is successfully updated.
+        """
+
+        if self.reg_subs_changed:
+            try:
+                self._subjects.update_subjects()
+            except CommonError as e:
+                if e.flag == "l_out":
+                    GUtils.disp_msg("You have been logged out.", "err", self)
+                    self.__close__(check_changed=False)
+                else:
+                    GUtils.disp_msg("Could not update registered subjects.\n" + e.args[0], "err", self)
+                    self.__close__()
+            else:
+                self._refresh_f()
+        self.__close__(check_changed=False)
+
+    def __update__(self):
+        """Display a loading window to mask execution of database update function."""
+
+        GUtils.disp_loading(GUtils.loading_win(self), self.__upd_subs__)
+
+    def __close__(self, check_changed: bool = True):
+        """
+        Optionally warn about changes made to registered subjects and close subject editor window.
+        :param check_changed: optional, will show a warning if registered subjects have been modified
+        """
+
+        if self.reg_subs_changed and check_changed:
+            if GUtils.disp_conf("Exit", "You have unsaved changes, exit?", self):
+                self.destroy()
+        else:
+            self.destroy()
+
+
+class ScheduleEditor:
+    """Rebuilds displayed schedule or displays a window to edit schedule."""
+
+    def __init__(self, smart_sch: SmartScheduler, schedule: Schedule = None, refresh_func=None):
+        """
+        Rebuild displayed schedule or initialise widgets and build window for editing schedule.
+        :param smart_sch: an instance of SmartScheduler to serve as the backend for editing schedule
+        :param schedule: optional, will be used instead of a new instance of Schedule if provided
+        :param refresh_func: external function to refresh schedule and class information
+        """
+
+        self._smart_sch = smart_sch
+        self._refresh_f = refresh_func
+        self.edit_mode = self._refresh_f is not None
+
+        try:
+            self.schedule = schedule or Schedule(self._smart_sch)
+        except CommonError:
+            raise
+
+        self._reg_subs = self._smart_sch.get_reg_subjects()
+
+        if self.edit_mode:
+            if not self._reg_subs:
+                raise CommonError(flag="no_subs")
+            self._root = tk.Toplevel()
+            self._root.title("Edit Schedule")
+            self._root.resizable(False, False)
+            self._root.protocol("WM_DELETE_WINDOW", self.__close__)
+
+            self._main_f = tk.Frame(self._root)
+            self._schedule_n = self.build_schedule()
+            self._btn_f = tk.Frame(self._main_f)
+            self._add_class_b = tk.Button(self._btn_f, text="Add Class", **Style.def_btn(26),
+                                          command=self.__add_class__)
+            self._exit_b = tk.Button(self._btn_f, text="Save and Exit", **Style.def_btn(26, Colours.M_RED),
+                                     command=self.__update__)
+
+            self._main_f.grid(sticky="nsew")
+            self._schedule_n.grid(row=1, column=1, sticky="nsew", **Padding.default())
+            self._btn_f.grid(row=2, column=1, sticky="nsew", **Padding.default())
+            self._btn_f.grid_columnconfigure(2, weight=10)
+            self._add_class_b.grid(row=1, column=1, **Padding.col_elem())
+            self._exit_b.grid(row=1, column=3, **Padding.col_elem())
+
+            self._root.geometry("+%d+%d" % GUtils.win_pos(self._root, 0.35, 0.35))
+            GUtils.lift_win(self._root)
+
+    def __refresh_sch__(self):
+        """Reconstruct schedule widget to reflect any changes made to the schedule."""
+
+        self._schedule_n.destroy()
+        self._schedule_n = self.build_schedule()
+        self._schedule_n.grid(row=1, column=1, sticky="nsew", **Padding.default())
+        GUtils.lift_win(self._root)
+
+    def __day_layout__(self, classes_: list, day_str_: str, schedule_n: ttk.Notebook):
+        """Build widgets to display each day in the schedule."""
+
+        layout_f = tk.Frame(schedule_n)
+        if not classes_:
+            status_l = tk.Label(layout_f, text=f"No classes on {day_str_}.", **Style.def_txt())
+            status_l.grid(row=1, column=1, sticky="nsew", **Padding.pad((50, 50)))
+        else:
+            i = 1
+            for class_ in classes_:
+                class_f = tk.Frame(layout_f)
+                class_time = Utils.time_str(class_.start_time) + " - " + Utils.time_str(class_.end_time)
+                class_time_l = tk.Label(class_f, text=class_time, **Style.def_txt())
+                class_name_l = tk.Label(class_f, text=self.schedule.get_class_name(class_=class_), anchor="w",
+                                        width=30, wraplength=300, **Style.def_txt())
+                class_f.grid(row=i, column=1, sticky="nsew", **Padding.pad((0, (10 if i == 1 else 0, 0))))
+                class_time_l.grid(row=1, column=1, sticky="nsew", **Padding.col_elem())
+                class_name_l.grid(row=1, column=2, sticky="nsew", **Padding.col_elem())
+                if self.edit_mode:
+                    class_f.grid_columnconfigure(2, weight=10)
+                    class_edit_b = tk.Button(class_f, text="Edit", **Style.def_btn(),
+                                             command=lambda c=class_: self.__edit_class(c))
+                    class_del_b = tk.Button(class_f, text="Delete", **Style.def_btn(bg=Colours.M_RED),
+                                            command=lambda c=class_: self.__del_class__(c))
+                    class_edit_b.grid(row=1, column=3, sticky="e", **Padding.col_elem())
+                    class_del_b.grid(row=1, column=4, sticky="e", **Padding.btm_right())
+                else:
+                    class_link_b = tk.Button(class_f, text="Open", **Style.def_btn(),
+                                             command=lambda: Utils.open_class_link(self._reg_subs[class_.reg_code]))
+                    class_link_b.grid(row=1, column=3, sticky="e", **Padding.col_elem())
+                i += 1
+        return layout_f
+
+    def __add_class__(self, edit_class: Class = None):
+        """
+        Add a new class to the schedule or optionally edit and existing one.
+        :param edit_class: optional, will edit class corresponding to this Class object if provided
+        """
+
+        def close_reg_win():
+            inp_w.destroy()
+            GUtils.lift_win(self._root)
+
+        def reg_class():
+            c_name = class_name.get()
+            c_day = class_day.get()
+            c_sth = class_sth.get()
+            c_stm = class_stm.get()
+            c_eth = class_eth.get()
+            c_etm = class_etm.get()
+            try:
+                if not c_name:
+                    raise CommonError("Please select a class.")
+                if not c_day:
+                    raise CommonError("Please select a class_day.")
+                if not c_sth or not c_stm:
+                    raise CommonError("Please select a valid start time.")
+                if not c_eth or not c_etm:
+                    raise CommonError("Please select a valid end time.")
+                sub_code, class_type = Subjects.sub_code_and_type(disp_subs[class_name.get()])
+                day = class_day.get()
+                start = class_sth.get() + class_stm.get()
+                end = class_eth.get() + class_etm.get()
+                if start == end:
+                    raise CommonError("Start time cannot be the same as end time.")
+                if int(end) < int(start):
+                    raise CommonError("End time must be after start time.")
+                self.schedule.add_class(Class(sub_code, class_type, day, start, end), old_class_=edit_class)
+            except CommonError as e_:
+                tk.Label(inp_f, text=e_.args[0], **Style.def_txt(fg=Colours.M_RED)) \
+                    .grid(row=1, column=1, sticky="w", **Padding.pad((Padding.DEF_X, (Padding.DEF_Y, 0))))
+            else:
+                inp_w.destroy()
+                self.__refresh_sch__()
+
+        inp_w = tk.Toplevel(self._main_f)
+        inp_w.protocol("WM_DELETE_WINDOW", close_reg_win)
+        class_name = tk.StringVar(inp_w)
+        class_day = tk.StringVar(inp_w)
+        class_sth = tk.StringVar(inp_w)
+        class_stm = tk.StringVar(inp_w)
+        class_eth = tk.StringVar(inp_w)
+        class_etm = tk.StringVar(inp_w)
+        try:
+            disp_subs = {self.schedule.get_class_name(reg_code=reg_code): reg_code for reg_code in
+                         self._smart_sch.get_reg_subjects().keys()}
+        except CommonError as e:
+            if e.flag == "l_out":
+                GUtils.disp_msg("You have been logged out.", "err", self)
+                close_reg_win()
+                self.__close__(check_changed=False)
+            else:
+                GUtils.disp_msg("Could not retrieve subjects info.\n" + e.args[0], "err", self)
+            return
+
+        inp_f = tk.Frame(inp_w)
+        class_l = tk.Label(inp_f, text="Select class:", **Style.def_txt())
+        class_c = ttk.Combobox(inp_f, **Style.def_combo(list(disp_subs.keys()), class_name, width=55))
+        if edit_class is not None:
+            class_c.set(self.schedule.get_class_name(edit_class))
+        time_f = tk.Frame(inp_f)
+        day_l = tk.Label(time_f, text="Day:", **Style.def_txt())
+        day_c = ttk.Combobox(time_f, **Style.def_combo(list(self.schedule.CLASS_DAYS.values()), class_day, width=10))
+        if edit_class is not None:
+            day_c.set(edit_class.class_day)
+        st_l = tk.Label(time_f, text="Start time:", **Style.def_txt())
+        sth_c = ttk.Combobox(time_f, **Style.def_combo(self.schedule.CLASS_HOURS, class_sth))
+        stc_l = tk.Label(time_f, text=":", **Style.def_txt())
+        stm_c = ttk.Combobox(time_f, **Style.def_combo(self.schedule.CLASS_MINS, class_stm))
+        if edit_class is not None:
+            sth, stm = Utils.time_str(edit_class.start_time).split(":")
+            sth_c.set(sth)
+            stm_c.set(stm)
+        et_l = tk.Label(time_f, text="End time:", **Style.def_txt())
+        eth_c = ttk.Combobox(time_f, **Style.def_combo(self.schedule.CLASS_HOURS, class_eth))
+        etc_l = tk.Label(time_f, text=":", **Style.def_txt())
+        etm_c = ttk.Combobox(time_f, **Style.def_combo(self.schedule.CLASS_MINS, class_etm))
+        if edit_class is not None:
+            eth, etm = Utils.time_str(edit_class.end_time).split(":")
+            eth_c.set(eth)
+            etm_c.set(etm)
+        submit_b = tk.Button(inp_f, text="Submit", **Style.def_btn(), command=reg_class)
+
+        inp_f.grid(sticky="nsew")
+        class_l.grid(row=1, column=1, sticky="w", **Padding.default())
+        class_c.grid(row=2, column=1, **Padding.col_elem())
+        time_f.grid(row=3, column=1, sticky="nsew", **Padding.col_no_x())
+        day_l.grid(row=1, column=1, sticky="w", **Padding.col_elem())
+        day_c.grid(row=1, column=2, sticky="w", **Padding.col_no_x())
+        st_l.grid(row=2, column=1, sticky="w", **Padding.col_elem())
+        sth_c.grid(row=2, column=2, sticky="w", **Padding.col_no_x())
+        stc_l.grid(row=2, column=3, sticky="w", **Padding.col_no_x())
+        stm_c.grid(row=2, column=4, sticky="w", **Padding.col_no_x())
+        et_l.grid(row=3, column=1, sticky="w", **Padding.col_elem())
+        eth_c.grid(row=3, column=2, sticky="w", **Padding.col_no_x())
+        etc_l.grid(row=3, column=3, sticky="w", **Padding.col_no_x())
+        etm_c.grid(row=3, column=4, sticky="w", **Padding.col_no_x())
+        submit_b.grid(row=4, column=1, **Padding.col_elem())
+
+        GUtils.lift_win(inp_w)
+        inp_w.geometry("+%d+%d" % GUtils.win_pos(self._root, 0.35, 0.35))
+
+    def __del_class__(self, class_: Class):
+        """
+        Delete a class from the schedule.
+        :param class_: the Class object to delete
+        """
+
+        self.schedule.delete_class(class_)
+        self.__refresh_sch__()
+
+    def __edit_class(self, edit_class: Class):
+        """
+        Edit a class from the schedule
+        :param edit_class: the Class object to edit
+        """
+
+        self.__add_class__(edit_class)
+
+    def __upd_sch__(self):
+        """
+        Attempt to update current schedule to database.
+
+        Refreshes schedule if database is successfully updated.
+        """
+
+        if self.schedule.schedule_changed():
+            try:
+                self.schedule.update_schedule()
+            except CommonError as e:
+                if e.flag == "l_out":
+                    GUtils.disp_msg("You have been logged out.", "err", self)
+                    self.__close__(check_changed=False)
+                else:
+                    GUtils.disp_msg("Could not update schedule.\n" + e.args[0], "err", self)
+                    self.__close__()
+            else:
+                self._refresh_f(self)
+        self.__close__(check_changed=False)
+
+    def __update__(self):
+        """Insert a loading window to mask execution of database update function."""
+
+        GUtils.disp_loading(GUtils.loading_win(self._root), self.__upd_sch__)
+
+    def __close__(self, check_changed=True):
+        """
+        Optionally warn about changes made to schedule and close schedule editor window.
+        :param check_changed: optional, will show a warning if schedule has been modified
+        """
+
+        if self.schedule.schedule_changed() and check_changed:
+            if GUtils.disp_conf("Exit", "You have unsaved changes, exit?", self._root):
+                self._root.destroy()
+        else:
+            self._root.destroy()
+
+    def build_schedule(self, schedule_n: ttk.Notebook = None) -> ttk.Notebook:
+        """
+        Discard old schedule display widget and return a new, updated schedule display widget.
+        :param schedule_n: the old schedule display widget to discard
+        :return: the new, updated schedule display widget
+        """
+
+        new_schedule_n = ttk.Notebook(schedule_n.master if schedule_n is not None else self._main_f)
+        for day_str in self.schedule.day_strs:
+            classes = self.schedule.dict_schedule[day_str]
+            layout_f = self.__day_layout__(classes, day_str, new_schedule_n)
+            new_schedule_n.add(child=layout_f, text=day_str)
+        if schedule_n is not None:
+            schedule_n.destroy()
+        return new_schedule_n
+
+
 class LoginWindow(tk.Tk):
     """Displays a window for the user to login, sign up, or change password."""
 
-    def __init__(self, smart_sch: SmartScheduler, action: str = "login", *args, **kwargs):
+    def __init__(self, smart_sch: SmartScheduler, action: str = "login"):
         """
         Initialises widgets and builds login, sign up, or change password window.
         :param smart_sch: an instance of SmartScheduler to serve as the backend for executing any action
         :param action: indicates whether the window is for login, sign up or change password
-        :param args: additional arguments for the tk.Tk superclass
-        :param kwargs: additional keyword arguments for the tk.Tk superclass
         """
 
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self.action = action
         self.smart_sch = smart_sch
         self.loading_win = GUtils.loading_win(self)
@@ -337,15 +810,13 @@ class LoginWindow(tk.Tk):
 class MainWindow(tk.Tk):
     """Displays the main window through which the user can avail most of Smart Scheduler's functionality."""
 
-    def __init__(self, smart_sch: SmartScheduler, *args, **kwargs):
+    def __init__(self, smart_sch: SmartScheduler):
         """
         Initialises widgets and builds the main window.
         :param smart_sch: An instance of SmartScheduler to serve as the backend for various functionality.
-        :param args: additional arguments for the tk.Tk superclass
-        :param kwargs: additional keyword arguments for the tk.Tk superclass
         """
 
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         self.smart_sch = smart_sch
         self.c_name = tk.StringVar(self, "")
@@ -408,7 +879,7 @@ class MainWindow(tk.Tk):
         self.exit_b = tk.Button(self.logout_f, text="Exit", **Style.def_btn(bg=Colours.M_RED), command=self.terminate)
 
         self.__build__()
-        self.__refresh_sch__()
+        self.__refresh__()
 
         self.geometry("+%d+%d" % GUtils.win_pos(self, 0.3, 0.2))
 
@@ -500,7 +971,7 @@ class MainWindow(tk.Tk):
         """Attempts to open a new window to edit registered subjects and displays any errors encountered."""
 
         try:
-            SubjectEditor(self.smart_sch, self.__refresh_sch__)
+            SubjectEditor(self.smart_sch, self.__refresh__)
             self.__rem_loading__()
         except CommonError as e:
             if e.flag == "l_out":
@@ -528,11 +999,10 @@ class MainWindow(tk.Tk):
             else:
                 self.__logout__()
 
-    def __refresh__(self):
+    def __refresh_class_info__(self, schedule: Schedule):
         """Attempts to refresh class and schedule information and displays any errors encountered."""
 
         try:
-            schedule = Schedule(self.smart_sch)
             curr_class, next_class = schedule.get_class_info()
             schedule.update_curr_class_link(curr_class)
             self.c_name.set(
@@ -540,24 +1010,20 @@ class MainWindow(tk.Tk):
             self.c_duration.set(schedule.class_duration(curr_class) if curr_class is not None else "")
             self.n_name.set(schedule.get_class_name(next_class) if next_class is not None else "No upcoming class.")
             self.n_duration.set(schedule.class_duration(next_class) if next_class is not None else "")
-            self.__refresh_sch__(refresh_info=False)
-            self.__rem_loading__()
-        except CommonError as e:
-            if e.flag == "l_out":
-                GUtils.disp_msg("You have been logged out.", "err", self)
-                self.__logout__()
-            else:
-                self.__rem_loading__()
-                GUtils.disp_msg("Could not refresh class info.\n" + e.args[0], "err", self)
+        except CommonError:
+            raise
 
-    def __refresh_sch__(self, refresh_info=True):
+    def __refresh__(self, sch_editor: ScheduleEditor = None):
         """
         Attempts to refresh schedule information and displays any errors encountered.
-        :param refresh_info: optional, calls self.__refresh__() if true
+        :parameter sch_editor: optional, will be used instead of a new instance of ScheduleEditor if provided
         """
 
         try:
-            new_schedule_n = ScheduleEditor(self.smart_sch).build_schedule(self.schedule_n)
+            editor = sch_editor or ScheduleEditor(self.smart_sch)
+            editor.edit_mode = False
+            new_schedule_n = editor.build_schedule(self.schedule_n)
+            self.__refresh_class_info__(editor.schedule)
             self.__rem_loading__()
         except CommonError as e:
             if e.flag == "l_out":
@@ -565,20 +1031,18 @@ class MainWindow(tk.Tk):
                 self.__logout__()
             else:
                 self.__rem_loading__()
-                GUtils.disp_msg("Could not refresh schedule info.\n" + e.args[0], "err", self)
+                GUtils.disp_msg("Could not refresh schedule and class information.\n" + e.args[0], "err", self)
         else:
             self.schedule_n.destroy()
             self.schedule_n = new_schedule_n
             self.schedule_n.grid(row=2, column=1, **Padding.default())
             self.__rem_loading__()
-            if refresh_info:
-                self.__refresh__()
 
     def __edit_sch__(self):
         """Attempts to open a new window to edit schedule and displays any errors encountered."""
 
         try:
-            ScheduleEditor(self.smart_sch, refresh_func=self.__refresh_sch__)
+            ScheduleEditor(self.smart_sch, refresh_func=self.__refresh__)
             self.__rem_loading__()
         except CommonError as e:
             if e.flag == "l_out":
@@ -635,478 +1099,6 @@ class MainWindow(tk.Tk):
         """Calls self.__logout__ with the intention of exiting the application."""
 
         self.__logout__(exit_prog=True)
-
-
-class SubjectEditor(tk.Toplevel):
-    """Displays a window for editing registered subjects."""
-
-    def __init__(self, smart_sch: SmartScheduler, refresh_schedule_func, *args, **kwargs):
-        """
-        Initialises widgets and builds the registered subjects editor window.
-        :param smart_sch: an instance of SmartScheduler to serve as the backend for editing subjects.
-        :param refresh_schedule_func: external function to refresh schedule in the main window
-        :param args: additional arguments for the tk.TopLevel superclass
-        :param kwargs: additional keyword arguments for the tk.TopLevel superclass
-        """
-
-        super().__init__(*args, **kwargs)
-        self._refresh_schedule_func = refresh_schedule_func
-
-        try:
-            self._subjects = Subjects(smart_sch)
-        except CommonError:
-            self.withdraw()
-            raise
-
-        self._subjects_list = {sub_code: f"{sub_code} - {sub_name}" for sub_code, sub_name in
-                               self._subjects.subjects_info.items()}
-
-        self.title("Edit Subjects")
-        self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self.__close__)
-
-        self.main_f = tk.Frame(self)
-        self.reg_subs_f = tk.LabelFrame(self.main_f, relief=tk.GROOVE, labelanchor='n', bd=1, labelwidget=tk.Label(
-            self.main_f, text="Registered Subjects", **Style.def_txt(Font.HEADING, Colours.M_BLUE)))
-        self.btn_f = tk.Frame(self.main_f)
-        self.reg_sub_b = tk.Button(self.btn_f, text="Register Subject", **Style.def_btn(26),
-                                   command=self.__reg_sub__)
-        self.exit_b = tk.Button(self.btn_f, text="Save and Exit", **Style.def_btn(26, bg=Colours.M_RED),
-                                command=self.__update__)
-
-        self.main_f.grid(sticky="nsew")
-        self.reg_subs_f.grid(row=1, column=1, sticky="nsew", **Padding.default())
-        self.btn_f.grid(row=2, column=1, sticky="nsew")
-        self.btn_f.grid_columnconfigure(2, weight=10)
-        self.reg_sub_b.grid(row=1, column=1, **Padding.col_elem())
-        self.exit_b.grid(row=1, column=3, **Padding.col_elem())
-        self.disp_subjects()
-        self.geometry("+%d+%d" % GUtils.win_pos(self, 0.35, 0.35))
-        GUtils.lift_win(self)
-
-    def disp_subjects(self):
-        """Refreshes list of displayed subjects."""
-
-        i = 1
-        for sub_f in self.reg_subs_f.winfo_children():
-            sub_f.destroy()
-        if not self._subjects.reg_subjects:
-            no_sub_l = tk.Label(self.reg_subs_f, text="No registered subjects.", **Style.def_txt())
-            return no_sub_l.grid(sticky="nsew", **Padding.default())
-        for reg_code in self._subjects.reg_subjects.keys():
-            sub_f = tk.Frame(self.reg_subs_f)
-            sub_name_l = tk.Label(sub_f, text=self._subjects.subject_name(reg_code), anchor="w", width=30,
-                                  wraplength=300, **Style.def_txt())
-            sub_edit_b = tk.Button(sub_f, text="Edit", **Style.def_btn(),
-                                   command=lambda rc=reg_code: self.__edit_sub__(rc))
-            sub_del_b = tk.Button(sub_f, text="Delete", **Style.def_btn(bg=Colours.M_RED),
-                                  command=lambda rc=reg_code: self.__del_sub__(rc))
-            sub_f.grid(row=i, column=1, sticky="nsew", **Padding.pad((0, (Padding.DEF_Y if i == 1 else 0, 0))))
-            sub_f.grid_columnconfigure(2, weight=10)
-            sub_name_l.grid(row=1, column=1, sticky="nsew", **Padding.col_elem())
-            sub_edit_b.grid(row=1, column=3, sticky="e", **Padding.col_elem())
-            sub_del_b.grid(row=1, column=4, sticky="e", **Padding.btm_right())
-            i += 1
-        GUtils.lift_win(self)
-
-    def __reg_sub__(self, edit_reg_code: str = None):
-        """
-        Register a new subject or edit an existing one.
-        :param edit_reg_code: optional, will edit subject corresponding to this registration code if provided
-        """
-
-        def __close__():
-            inp_w.destroy()
-            GUtils.lift_win(self)
-
-        def __register__():
-            s_name: str = sub_sel.get()
-            c_type: str = class_type.get()
-            c_link: str = class_link.get()
-            try:
-                if not s_name:
-                    raise CommonError("Please choose a subject.")
-                elif not c_type:
-                    raise CommonError("Please choose a class type.")
-                elif not c_link:
-                    raise CommonError("Class link cannot be empty.")
-                sub_code: str = s_name.split(" - ")[0]
-                old_reg_code: str = edit_reg_code
-                self._subjects.register_subject({
-                    "s_code": sub_code,
-                    "c_type": c_type,
-                    "c_link": c_link,
-                }, old_reg_code=old_reg_code)
-            except CommonError as e:
-                error: str = e.args[0]
-                error_l = tk.Label(inp_f, text=error, **Style.def_txt(fg=Colours.M_RED))
-                error_l.grid(row=1, column=1, sticky="w", **Padding.pad((Padding.DEF_X, (Padding.DEF_Y, 0))))
-            else:
-                inp_w.destroy()
-                return self.disp_subjects()
-
-        init_s_code, init_c_type = self._subjects.sub_code_and_type(edit_reg_code) \
-            if edit_reg_code is not None else (None, "Lecture")
-        init_s_name = self._subjects_list[init_s_code] if init_s_code is not None else ""
-        init_c_link = self._subjects.reg_subjects[edit_reg_code] if edit_reg_code is not None else ""
-        inp_w = tk.Toplevel(self)
-        inp_w.protocol("WM_DELETE_WINDOW", __close__)
-        inp_f = tk.Frame(inp_w)
-        sub_sel = tk.StringVar(inp_f)
-        class_type = tk.StringVar(inp_f, init_c_type)
-        class_link = tk.StringVar(inp_f, init_c_link)
-        sub_l = tk.Label(inp_f, text="Choose subject:", **Style.def_txt())
-        sub_c = ttk.Combobox(inp_f, values=list(self._subjects_list.values()), textvariable=sub_sel, width=55,
-                             state="readonly")
-        if init_s_name:
-            sub_c.set(init_s_name)
-        class_type_f = tk.LabelFrame(inp_f, relief=tk.GROOVE, bd=2, labelwidget=tk.Label(
-            inp_f, text="Class type:", **Style.def_txt()))
-        lec_c = tk.Radiobutton(class_type_f, text="Lecture", **Style.def_txt(), value="Lecture", variable=class_type)
-        tut_c = tk.Radiobutton(class_type_f, text="Tutorial", **Style.def_txt(), value="Tutorial", variable=class_type)
-        class_link_f = tk.LabelFrame(inp_f, relief=tk.GROOVE, bd=2, labelwidget=tk.Label(
-            inp_f, text="Class link:", **Style.def_txt()))
-        class_link_l = tk.Label(class_link_f, text=Utils.MEET_LINK, **Style.def_txt(fg=Colours.M_BLUE))
-        class_link_e = tk.Entry(class_link_f, textvariable=class_link)
-        submit_b = tk.Button(inp_f, text="Submit", **Style.def_btn(), command=__register__)
-
-        inp_f.grid(sticky="nsew")
-        sub_l.grid(row=2, column=1, **Padding.default(), sticky="w")
-        sub_c.grid(row=3, column=1, **Padding.col_elem())
-        class_type_f.grid(row=4, column=1, sticky="nsew", **Padding.col_elem())
-        lec_c.grid(row=1, column=1, **Padding.default())
-        tut_c.grid(row=1, column=2, **Padding.default())
-        class_link_f.grid(row=5, column=1, sticky="nsew", **Padding.col_elem())
-        class_link_l.grid(row=1, column=1, **Padding.default())
-        class_link_e.grid(row=1, column=2, **Padding.no_left())
-        submit_b.grid(row=6, column=1, **Padding.col_elem())
-
-        GUtils.lift_win(inp_w)
-        inp_w.geometry("+%d+%d" % GUtils.win_pos(self, 0.35, 0.35))
-
-    def __del_sub__(self, reg_code: str):
-        """
-        Delete a subject from registered subjects.
-        :param reg_code: the registration code of the subject to delete
-        """
-
-        self._subjects.unregister_subject(reg_code)
-        self.disp_subjects()
-
-    def __edit_sub__(self, reg_code: str):
-        """
-        Edit a subject from registered subjects.
-        :param reg_code: the registration code of the subject to edit
-        """
-
-        self.__reg_sub__(reg_code)
-
-    def __upd_subs__(self):
-        """
-        Attempt to update current registered subjects to the database and close subject editor window.
-
-        Refreshes schedule if database is successfully updated.
-        """
-
-        if self._subjects.reg_subs_changed():
-            try:
-                self._subjects.update_subjects()
-            except CommonError as e:
-                if e.flag == "l_out":
-                    GUtils.disp_msg("You have been logged out.", "err", self)
-                    self.__close__(check_changed=False)
-                else:
-                    GUtils.disp_msg("Could not update registered subjects.\n" + e.args[0], "err", self)
-                    self.__close__()
-            else:
-                self._refresh_schedule_func()
-        self.__close__(check_changed=False)
-
-    def __update__(self):
-        """Display a loading window to mask execution of database update function."""
-
-        GUtils.disp_loading(GUtils.loading_win(self), self.__upd_subs__)
-
-    def __close__(self, check_changed: bool = True):
-        """
-        Optionally warn about changes made to registered subjects and close subject editor window.
-        :param check_changed: optional, will show a warning if registered subjects have been modified
-        """
-
-        if self._subjects.reg_subs_changed() and check_changed:
-            if GUtils.disp_conf("Exit", "You have unsaved changes, exit?", self):
-                self.destroy()
-        else:
-            self.destroy()
-
-
-class ScheduleEditor:
-    """Rebuilds displayed schedule or displays a window to edit schedule."""
-
-    def __init__(self, smart_sch: SmartScheduler, refresh_func=None):
-        """
-        Rebuild displayed schedule or initialise widgets and build window for editing schedule.
-        :param smart_sch: an instance of SmartScheduler to serve as the backend for editing schedule
-        :param refresh_func: external function to refresh schedule in the main window
-        """
-
-        self._smart_sch = smart_sch
-        self._refresh_func = refresh_func
-        self._edit_mode = self._refresh_func is not None
-
-        try:
-            self._schedule = Schedule(self._smart_sch)
-        except CommonError:
-            raise
-
-        self._reg_subs = self._smart_sch.get_reg_subjects()
-
-        if self._edit_mode:
-            if not self._reg_subs:
-                raise CommonError(flag="no_subs")
-            self._root = tk.Toplevel()
-            self._root.title("Edit Schedule")
-            self._root.resizable(False, False)
-            self._root.protocol("WM_DELETE_WINDOW", self.__close__)
-
-            self._main_f = tk.Frame(self._root)
-            self._schedule_n = self.build_schedule()
-            self._btn_f = tk.Frame(self._main_f)
-            self._add_class_b = tk.Button(self._btn_f, text="Add Class", **Style.def_btn(26),
-                                          command=self.__add_class__)
-            self._exit_b = tk.Button(self._btn_f, text="Save and Exit", **Style.def_btn(26, Colours.M_RED),
-                                     command=self.__update__)
-
-            self._main_f.grid(sticky="nsew")
-            self._schedule_n.grid(row=1, column=1, sticky="nsew", **Padding.default())
-            self._btn_f.grid(row=2, column=1, sticky="nsew", **Padding.default())
-            self._btn_f.grid_columnconfigure(2, weight=10)
-            self._add_class_b.grid(row=1, column=1, **Padding.col_elem())
-            self._exit_b.grid(row=1, column=3, **Padding.col_elem())
-
-            self._root.geometry("+%d+%d" % GUtils.win_pos(self._root, 0.35, 0.35))
-            GUtils.lift_win(self._root)
-
-    def __refresh_sch__(self):
-        """Reconstruct schedule widget to reflect any changes made to the schedule."""
-
-        self._schedule_n.destroy()
-        self._schedule_n = self.build_schedule()
-        self._schedule_n.grid(row=1, column=1, sticky="nsew", **Padding.default())
-        GUtils.lift_win(self._root)
-
-    def __day_layout__(self, classes_: list, day_str_: str, schedule_n: ttk.Notebook):
-        """Build widgets to display each day in the schedule."""
-
-        layout_f = tk.Frame(schedule_n)
-        if not classes_:
-            status_l = tk.Label(layout_f, text=f"No classes on {day_str_}.", **Style.def_txt())
-            status_l.grid(row=1, column=1, sticky="nsew", **Padding.pad((50, 50)))
-        else:
-            i = 1
-            for class_ in classes_:
-                class_f = tk.Frame(layout_f)
-                class_time = Utils.time_str(class_.start_time) + " - " + Utils.time_str(class_.end_time)
-                class_time_l = tk.Label(class_f, text=class_time, **Style.def_txt())
-                class_name_l = tk.Label(class_f, text=self._schedule.get_class_name(class_=class_), anchor="w",
-                                        width=30, wraplength=300, **Style.def_txt())
-                class_f.grid(row=i, column=1, sticky="nsew", **Padding.pad((0, (10 if i == 1 else 0, 0))))
-                class_time_l.grid(row=1, column=1, sticky="nsew", **Padding.col_elem())
-                class_name_l.grid(row=1, column=2, sticky="nsew", **Padding.col_elem())
-                if self._edit_mode:
-                    class_f.grid_columnconfigure(2, weight=10)
-                    class_edit_b = tk.Button(class_f, text="Edit", **Style.def_btn(),
-                                             command=lambda c=class_: self.__edit_class(c))
-                    class_del_b = tk.Button(class_f, text="Delete", **Style.def_btn(bg=Colours.M_RED),
-                                            command=lambda c=class_: self.__del_class__(c))
-                    class_edit_b.grid(row=1, column=3, sticky="e", **Padding.col_elem())
-                    class_del_b.grid(row=1, column=4, sticky="e", **Padding.btm_right())
-                else:
-                    class_link_b = tk.Button(class_f, text="Open", **Style.def_btn(),
-                                             command=lambda: Utils.open_class_link(self._reg_subs[class_.reg_code]))
-                    class_link_b.grid(row=1, column=3, sticky="e", **Padding.col_elem())
-                i += 1
-        return layout_f
-
-    def __add_class__(self, edit_class: Class = None):
-        """
-        Add a new class to the schedule or optionally edit and existing one.
-        :param edit_class: optional, will edit class corresponding to this Class object if provided
-        """
-
-        def close_reg_win():
-            inp_w.destroy()
-            GUtils.lift_win(self._root)
-
-        def reg_class():
-            c_name = class_name.get()
-            c_day = class_day.get()
-            c_sth = class_sth.get()
-            c_stm = class_stm.get()
-            c_eth = class_eth.get()
-            c_etm = class_etm.get()
-            try:
-                if not c_name:
-                    raise CommonError("Please select a class.")
-                if not c_day:
-                    raise CommonError("Please select a class_day.")
-                if not c_sth or not c_stm:
-                    raise CommonError("Please select a valid start time.")
-                if not c_eth or not c_etm:
-                    raise CommonError("Please select a valid end time.")
-                sub_code, class_type = Subjects.sub_code_and_type(disp_subs[class_name.get()])
-                day = class_day.get()
-                start = class_sth.get() + class_stm.get()
-                end = class_eth.get() + class_etm.get()
-                if start == end:
-                    raise CommonError("Start time cannot be the same as end time.")
-                if int(end) < int(start):
-                    raise CommonError("End time must be after start time.")
-                self._schedule.add_class(Class(sub_code, class_type, day, start, end), old_class_=edit_class)
-            except CommonError as e_:
-                tk.Label(inp_f, text=e_.args[0], **Style.def_txt(fg=Colours.M_RED)) \
-                    .grid(row=1, column=1, sticky="w", **Padding.pad((Padding.DEF_X, (Padding.DEF_Y, 0))))
-            else:
-                inp_w.destroy()
-                self.__refresh_sch__()
-
-        inp_w = tk.Toplevel(self._main_f)
-        inp_w.protocol("WM_DELETE_WINDOW", close_reg_win)
-        class_name = tk.StringVar(inp_w)
-        class_day = tk.StringVar(inp_w)
-        class_sth = tk.StringVar(inp_w)
-        class_stm = tk.StringVar(inp_w)
-        class_eth = tk.StringVar(inp_w)
-        class_etm = tk.StringVar(inp_w)
-        try:
-            disp_subs = {self._schedule.get_class_name(reg_code=reg_code): reg_code for reg_code in
-                         self._smart_sch.get_reg_subjects().keys()}
-        except CommonError as e:
-            if e.flag == "l_out":
-                GUtils.disp_msg("You have been logged out.", "err", self)
-                close_reg_win()
-                self.__close__(check_changed=False)
-            else:
-                GUtils.disp_msg("Could not retrieve subjects info.\n" + e.args[0], "err", self)
-            return
-
-        inp_f = tk.Frame(inp_w)
-        class_l = tk.Label(inp_f, text="Select class:", **Style.def_txt())
-        class_c = ttk.Combobox(inp_f, **Style.def_combo(list(disp_subs.keys()), class_name, width=55))
-        if edit_class is not None:
-            class_c.set(self._schedule.get_class_name(edit_class))
-        time_f = tk.Frame(inp_f)
-        day_l = tk.Label(time_f, text="Day:", **Style.def_txt())
-        day_c = ttk.Combobox(time_f, **Style.def_combo(list(self._schedule.CLASS_DAYS.values()), class_day, width=10))
-        if edit_class is not None:
-            day_c.set(edit_class.class_day)
-        st_l = tk.Label(time_f, text="Start time:", **Style.def_txt())
-        sth_c = ttk.Combobox(time_f, **Style.def_combo(self._schedule.CLASS_HOURS, class_sth))
-        stc_l = tk.Label(time_f, text=":", **Style.def_txt())
-        stm_c = ttk.Combobox(time_f, **Style.def_combo(self._schedule.CLASS_MINS, class_stm))
-        if edit_class is not None:
-            sth, stm = Utils.time_str(edit_class.start_time).split(":")
-            sth_c.set(sth)
-            stm_c.set(stm)
-        et_l = tk.Label(time_f, text="End time:", **Style.def_txt())
-        eth_c = ttk.Combobox(time_f, **Style.def_combo(self._schedule.CLASS_HOURS, class_eth))
-        etc_l = tk.Label(time_f, text=":", **Style.def_txt())
-        etm_c = ttk.Combobox(time_f, **Style.def_combo(self._schedule.CLASS_MINS, class_etm))
-        if edit_class is not None:
-            eth, etm = Utils.time_str(edit_class.end_time).split(":")
-            eth_c.set(eth)
-            etm_c.set(etm)
-        submit_b = tk.Button(inp_f, text="Submit", **Style.def_btn(), command=reg_class)
-
-        inp_f.grid(sticky="nsew")
-        class_l.grid(row=1, column=1, sticky="w", **Padding.default())
-        class_c.grid(row=2, column=1, **Padding.col_elem())
-        time_f.grid(row=3, column=1, sticky="nsew", **Padding.col_no_x())
-        day_l.grid(row=1, column=1, sticky="w", **Padding.col_elem())
-        day_c.grid(row=1, column=2, sticky="w", **Padding.col_no_x())
-        st_l.grid(row=2, column=1, sticky="w", **Padding.col_elem())
-        sth_c.grid(row=2, column=2, sticky="w", **Padding.col_no_x())
-        stc_l.grid(row=2, column=3, sticky="w", **Padding.col_no_x())
-        stm_c.grid(row=2, column=4, sticky="w", **Padding.col_no_x())
-        et_l.grid(row=3, column=1, sticky="w", **Padding.col_elem())
-        eth_c.grid(row=3, column=2, sticky="w", **Padding.col_no_x())
-        etc_l.grid(row=3, column=3, sticky="w", **Padding.col_no_x())
-        etm_c.grid(row=3, column=4, sticky="w", **Padding.col_no_x())
-        submit_b.grid(row=4, column=1, **Padding.col_elem())
-
-        GUtils.lift_win(inp_w)
-        inp_w.geometry("+%d+%d" % GUtils.win_pos(self._root, 0.35, 0.35))
-
-    def __del_class__(self, class_: Class):
-        """
-        Delete a class from the schedule.
-        :param class_: the Class object to delete
-        """
-
-        self._schedule.delete_class(class_)
-        self.__refresh_sch__()
-
-    def __edit_class(self, edit_class: Class):
-        """
-        Edit a class from the schedule
-        :param edit_class: the Class object to edit
-        """
-
-        self.__add_class__(edit_class)
-
-    def __upd_sch__(self):
-        """
-        Attempt to update current schedule to database.
-
-        Refreshes schedule if database is successfully updated.
-        """
-
-        if self._schedule.schedule_changed():
-            try:
-                self._schedule.update_schedule()
-            except CommonError as e:
-                if e.flag == "l_out":
-                    GUtils.disp_msg("You have been logged out.", "err", self)
-                    self.__close__(check_changed=False)
-                else:
-                    GUtils.disp_msg("Could not update schedule.\n" + e.args[0], "err", self)
-                    self.__close__()
-            else:
-                self._refresh_func()
-        self.__close__(check_changed=False)
-
-    def __update__(self):
-        """Insert a loading window to mask execution of database update function."""
-
-        GUtils.disp_loading(GUtils.loading_win(self._root), self.__upd_sch__)
-
-    def __close__(self, check_changed=True):
-        """
-        Optionally warn about changes made to schedule and close schedule editor window.
-        :param check_changed: optional, will show a warning if schedule has been modified
-        """
-
-        if self._schedule.schedule_changed() and check_changed:
-            if GUtils.disp_conf("Exit", "You have unsaved changes, exit?", self._root):
-                self._root.destroy()
-        else:
-            self._root.destroy()
-
-    def build_schedule(self, schedule_n: ttk.Notebook = None) -> ttk.Notebook:
-        """
-        Discard old schedule display widget and return a new, updated schedule display widget.
-        :param schedule_n: the old schedule display widget to discard
-        :return: the new, updated schedule display widget
-        """
-
-        new_schedule_n = ttk.Notebook(schedule_n.master if schedule_n is not None else self._main_f)
-        for day_str in self._schedule.day_strs:
-            classes = self._schedule.dict_schedule[day_str]
-            layout_f = self.__day_layout__(classes, day_str, new_schedule_n)
-            new_schedule_n.add(child=layout_f, text=day_str)
-        if schedule_n is not None:
-            schedule_n.destroy()
-        return new_schedule_n
 
 
 def main():

@@ -362,19 +362,18 @@ class SubjectEditor(tk.Toplevel):
         Refreshes schedule if database is successfully updated.
         """
 
-        if self.reg_subs_changed:
-            try:
+        try:
+            if self.reg_subs_changed:
                 self._subjects.update_subjects()
-            except CommonError as e:
-                if e.flag == "l_out":
-                    GUtils.disp_msg("You have been logged out.", "err", self)
-                    self.__close__(check_changed=False)
-                else:
-                    GUtils.disp_msg("Could not update registered subjects.\n" + e.args[0], "err", self)
-                    self.__close__()
+        except CommonError as e:
+            if e.flag == "l_out":
+                GUtils.disp_msg("You have been logged out.", "err", self)
+                self.__close__(check_changed=False)
             else:
-                self._refresh_f()
-        self.__close__(check_changed=False)
+                GUtils.disp_msg("Could not update registered subjects.\n" + e.args[0], "err", self)
+        else:
+            self._refresh_f()
+            self.__close__(check_changed=False)
 
     def __update__(self):
         """Display a loading window to mask execution of database update function."""
@@ -537,12 +536,12 @@ class ScheduleEditor:
             disp_subs = {self.schedule.get_class_name(reg_code=reg_code): reg_code for reg_code in
                          self._smart_sch.get_reg_subjects().keys()}
         except CommonError as e:
+            close_reg_win()
             if e.flag == "l_out":
-                GUtils.disp_msg("You have been logged out.", "err", self)
-                close_reg_win()
+                GUtils.disp_msg("You have been logged out.", "err", self._root)
                 self.__close__(check_changed=False)
             else:
-                GUtils.disp_msg("Could not retrieve subjects info.\n" + e.args[0], "err", self)
+                GUtils.disp_msg("Could not retrieve subjects info.\n" + e.args[0], "err", self._root)
             return
 
         inp_f = tk.Frame(inp_w)
@@ -616,19 +615,18 @@ class ScheduleEditor:
         Refreshes schedule if database is successfully updated.
         """
 
-        if self.schedule.schedule_changed():
-            try:
+        try:
+            if self.schedule.schedule_changed():
                 self.schedule.update_schedule()
-            except CommonError as e:
-                if e.flag == "l_out":
-                    GUtils.disp_msg("You have been logged out.", "err", self)
-                    self.__close__(check_changed=False)
-                else:
-                    GUtils.disp_msg("Could not update schedule.\n" + e.args[0], "err", self)
-                    self.__close__()
+        except CommonError as e:
+            if e.flag == "l_out":
+                GUtils.disp_msg("You have been logged out.", "err", self._root)
+                self.__close__(check_changed=False)
             else:
-                self._refresh_f(self)
-        self.__close__(check_changed=False)
+                GUtils.disp_msg("Could not update schedule.\n" + e.args[0], "err", self._root)
+        else:
+            self._refresh_f(self)
+            self.__close__(check_changed=False)
 
     def __update__(self):
         """Insert a loading window to mask execution of database update function."""
@@ -831,7 +829,7 @@ class MainWindow(tk.Tk):
 
         self.title("Smart Scheduler")
         self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self.terminate)
+        self.protocol("WM_DELETE_WINDOW", lambda: self.__disp_loading__(self.__close__))
         self.main_f = tk.Frame(self)
         self.title_l = tk.Label(self.main_f, text="Welcome to Smart Scheduler",
                                 **Style.def_txt(Font.TITLE, Colours.M_BLUE))
@@ -876,7 +874,8 @@ class MainWindow(tk.Tk):
                                                                                            fg=Colours.M_BLUE))
         self.logout_b = tk.Button(self.logout_f, text="Logout", **Style.def_btn(),
                                   command=lambda: self.__disp_loading__(self.__logout__))
-        self.exit_b = tk.Button(self.logout_f, text="Exit", **Style.def_btn(bg=Colours.M_RED), command=self.terminate)
+        self.exit_b = tk.Button(self.logout_f, text="Exit", **Style.def_btn(bg=Colours.M_RED),
+                                command=lambda: self.__disp_loading__(self.__close__))
 
         self.__build__()
         self.__refresh__()
@@ -1078,24 +1077,28 @@ class MainWindow(tk.Tk):
         """
         Attempts to logout.
 
-        Any encountered errors are suppressed. Either The main window is destroyed and the login window is displayed,
-        or the application exits completely.
+        Either The main window is destroyed and the login window is displayed, or the application exits completely.
         :param exit_prog: optional, the application will exit instead of displaying the login window if true.
         """
 
         try:
             self.smart_sch.logout()
         except CommonError as e:
-            GUtils.disp_msg("Unable to logout properly.\n" + e.args[0], "err", self)
+            self.__rem_loading__()
+            if exit_prog:
+                if GUtils.disp_conf("Logout Error", f"Unable to logout properly.\n{e.args[0]}\nExit anyway?", self):
+                    self.loading_win.destroy()
+                    self.destroy()
+            else:
+                GUtils.disp_msg("Unable to logout properly.\n" + e.args[0], "err", self)
         else:
             self.stu_id.set("")
-        finally:
             self.loading_win.destroy()
             self.destroy()
             if not exit_prog:
                 LoginWindow(self.smart_sch).mainloop()
 
-    def terminate(self):
+    def __close__(self):
         """Calls self.__logout__ with the intention of exiting the application."""
 
         self.__logout__(exit_prog=True)

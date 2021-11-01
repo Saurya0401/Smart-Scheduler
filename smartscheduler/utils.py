@@ -99,19 +99,10 @@ class Utils:
         return dt.datetime.now()
 
     @staticmethod
-    def paths(config_file):
-        """
-        Retrieve the paths for the database and the subjects file from the config.ini file.
-        :return: a tuple containing the retrieved paths
-        """
-
-        paths = _Config.get_config("paths", config_file)
-        return paths["database"], paths["subjects"]
-
-    @staticmethod
-    def colours(config_file):
+    def colours(config_file: str) -> list:
         """
         Retrieve the hex codes and labels of the colours to be used in the GUI.
+        :param config_file: the config file path
         :return: a list of colour hex codes and their corresponding use case labels
         """
 
@@ -120,9 +111,10 @@ class Utils:
         return ["#" + colours[label] for label in c_labels]
 
     @staticmethod
-    def fonts(config_file):
+    def fonts(config_file: str) -> list:
         """
         Retrieve the default font family and font family and size pairs to be used in the GUI.
+        :param config_file: the config file path
         :return: a list containing the retrieved font specifications
         """
 
@@ -147,7 +139,7 @@ class _Config(ConfigParser):
         """
         Retrieve specific configuration info from the given config file.
 
-        If there are any errors while retrieving configs, a FatalError is raised which will terminate the application.
+        If there are any errors while retrieving configs, a FatalError is raised.
         :param section: the section of config_file from which configuration details are to be retrieved
         :param config_file: the configuration file path
         :return: a ConfigParser.Section object containing the retrieved configuration details
@@ -156,7 +148,7 @@ class _Config(ConfigParser):
         try:
             parser = cls(config_file)
             if not parser.has_section(section):
-                raise KeyError(f"Configuration for \"{section}\" not located.")
+                raise KeyError(f"Configuration for \"{section}\" not found.")
         except ConfigError:
             raise FatalError("Configuration file (config.ini) not found or corrupted.")
         except KeyError as e:

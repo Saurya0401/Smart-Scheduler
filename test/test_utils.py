@@ -33,19 +33,8 @@ class UtilsTest(unittest.TestCase):
         sub_time_obj = dt.datetime.strptime("1204", "%H%M").time()
         self.assertEqual(Utils.time_obj(self.test_time_str, 30), sub_time_obj)
 
-    def test_b15_get_paths(self):
-        """TEST_CASE_ID B.1.5"""
-        test_paths_tuple = ("test/test_server/SmartScheduler.db", "test/test_server/test_subjects.csv")
-        self.assertEqual(Utils.paths(self.config_path), test_paths_tuple)
-        self.assertRaises(FatalError, Utils.paths, "wrong/config_file/path")
-        empty_config_file = "./test/empty_config.ini"
-        with open(empty_config_file, 'w'):
-            pass
-        self.assertRaises(FatalError, Utils.paths, empty_config_file)
-        remove(empty_config_file)
-
     def test_b16_get_colours(self):
-        """TEST_CASE_ID B.1.6"""
+        """TEST_CASE_ID B.1.5"""
         test_colours_list = ["#111111", "#222222", "#333333", "#444444", "#555555"]
         self.assertEqual(Utils.colours(self.config_path), test_colours_list)
         self.assertRaises(FatalError, Utils.colours, "wrong/config_file/path")
@@ -56,7 +45,7 @@ class UtilsTest(unittest.TestCase):
         remove(empty_config_file)
 
     def test_b17_get_fonts(self):
-        """TEST_CASE_ID B.1.7"""
+        """TEST_CASE_ID B.1.6"""
         test_fonts_list = ["Arial", ("Arial", 10), ("Arial", 20), ("Arial", 40)]
         self.assertEqual(Utils.fonts(self.config_path), test_fonts_list)
         self.assertRaises(FatalError, Utils.fonts, "wrong/config_file/path")

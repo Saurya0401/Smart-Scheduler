@@ -1,5 +1,4 @@
 import unittest
-import sqlite3
 from os import remove
 from random import randint
 
@@ -10,25 +9,24 @@ from smartscheduler.exceptions import CommonDatabaseError
 class SmartSchedulerDBTest(unittest.TestCase):
     """TEST A.1"""
 
-    db_path = "./test/test_server/Test.db"
+    test_db = "./test/test_server/Test.db"
+    test_server = "http://127.0.0.1:8765/"
 
     @classmethod
     def setUpClass(cls):
-        SmartSchedulerDB(cls.db_path)
+        SmartSchedulerDB(cls.test_server)
 
     def test_a11_create_tables(self):
         """TEST_CASE_ID A.1.1"""
-        db = SmartSchedulerDB(self.db_path)
-        conn = sqlite3.connect(self.db_path)
-        curs = conn.cursor()
-        tables = [res[0] for res in curs.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()]
+        db = SmartSchedulerDB(self.test_server)
+        db.__db_cmd__("SELECT name FROM sqlite_master WHERE type = 'table'", None, False)
+        tables = [res[0] for res in db.db_ret]
+        db.__db_cmd__(f"SELECT name FROM pragma_table_info('{db.TAB_ACCOUNTS}')", None, False)
+        retrieved_accounts_cols = [res[0] for res in db.db_ret]
+        db.__db_cmd__(f"SELECT name FROM pragma_table_info('{db.TAB_SUB_INFO}')", None, False)
+        retrieved_sub_info_cols = [res[0] for res in db.db_ret]
         account_cols = [db.COL_STU_ID, db.COL_PSWRD_HASH, db.COL_SCHEDULE, db.COL_SUBJECTS, db.COL_SESSION_ID]
-        retrieved_accounts_cols = [res[0] for res in
-                                   curs.execute(f"SELECT name FROM pragma_table_info('{db.TAB_ACCOUNTS}')").fetchall()]
         sub_info_cols = [db.COL_SUB_CODE, db.COL_SUB_NAME]
-        retrieved_sub_info_cols = [res[0] for res in
-                                   curs.execute(f"SELECT name FROM pragma_table_info('{db.TAB_SUB_INFO}')").fetchall()]
-        conn.close()
         self.assertIn(db.TAB_ACCOUNTS, tables)
         self.assertIn(db.TAB_SUB_INFO, tables)
         self.assertEqual(retrieved_accounts_cols, account_cols)
@@ -36,7 +34,7 @@ class SmartSchedulerDBTest(unittest.TestCase):
 
     def test_a12_add_one_data(self):
         """TEST_CASE_ID A.1.2"""
-        db = SmartSchedulerDB(self.db_path)
+        db = SmartSchedulerDB(self.test_server)
         test_data = [str(randint(10 ** 9, 10 ** 10 - 1)), "test_pass_hash", "test_sch", "test_subs"]
         db.new_account(*test_data)
         retrieved_data = [db.query_account_info(test_data[0], query)[0] for query in
@@ -47,7 +45,7 @@ class SmartSchedulerDBTest(unittest.TestCase):
 
     def test_a13_upd_one_data(self):
         """TEST_CASE_ID A.1.3"""
-        db = SmartSchedulerDB(self.db_path)
+        db = SmartSchedulerDB(self.test_server)
         test_data_id = self.test_a12_add_one_data()[0]
         updated = {
             db.COL_PSWRD_HASH: "updated_pass_hash",
@@ -64,24 +62,16 @@ class SmartSchedulerDBTest(unittest.TestCase):
 
     def test_a14_del_one_data(self):
         """TEST_CASE_ID A.1.4"""
-        db = SmartSchedulerDB(self.db_path)
+        db = SmartSchedulerDB(self.test_server)
         test_data = self.test_a12_add_one_data()
         db.delete_account(test_data[0])
         retrieved_data = [db.query_account_info(test_data[0], query) for query in
                           (db.COL_STU_ID, db.COL_PSWRD_HASH, db.COL_SCHEDULE, db.COL_SUBJECTS)]
-        self.assertEqual(all([i == () for i in retrieved_data]), True)
-
-    def test_a15_add_batch_data(self):
-        """TEST_CASE_ID A.1.5"""
-        db = SmartSchedulerDB(self.db_path)
-        test_list = [(f"TestKey{i}", f"Test Name {i}") for i in range(200)]
-        db.make_subs_list(test_list)
-        retrieved_data = db.retrieve_all(db.TAB_SUB_INFO)
-        self.assertEqual(retrieved_data, test_list)
+        self.assertEqual(all([i == [] for i in retrieved_data]), True)
 
     @classmethod
     def tearDownClass(cls):
-        remove(cls.db_path)
+        remove(cls.test_db)
 
 
 if __name__ == '__main__':

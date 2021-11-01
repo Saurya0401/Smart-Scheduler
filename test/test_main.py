@@ -4,17 +4,18 @@ from os import remove
 from random import randint
 
 from smartscheduler.main import SmartScheduler, Subjects, Class, Schedule
-from smartscheduler.exceptions import CommonError, FatalError
+from smartscheduler.exceptions import CommonError
 
 
 class SmartSchedulerTest(unittest.TestCase):
     """TEST C.1"""
 
     smart_sch = None
+    test_db = "./test/test_server/Test.db"
 
     @classmethod
     def setUpClass(cls):
-        cls.smart_sch = SmartScheduler("./test/test_config.ini")
+        cls.smart_sch = SmartScheduler("http://127.0.0.1:8765/")
 
     def setUp(self):
         self.unregistered_id = str(randint(10**9, 10**10 - 1))
@@ -78,30 +79,30 @@ class SmartSchedulerTest(unittest.TestCase):
     def test_c16_update_sub_list(self):
         """TEST_CASE_ID C.1.6"""
         test_subs = [
-            ("EMT1016", "Engineering Mathematics I"),
-            ("EEL1166", "Circuit Theory"),
-            ("EEL1176", "Field Theory"),
-            ("EEE1016", "Electronics I"),
-            ("ECE1016", "Computer and Program Design")
+            ["EMT1016", "Engineering Mathematics I"],
+            ["EEL1166", "Circuit Theory"],
+            ["EEL1176", "Field Theory"],
+            ["EEE1016", "Electronics I"],
+            ["ECE1016", "Computer and Program Design"]
         ]
         self.smart_sch.update_sub_list()
         self.assertEqual(self.smart_sch.db.retrieve_all(self.smart_sch.db.TAB_SUB_INFO), test_subs)
-        self.assertRaises(FatalError, lambda: SmartScheduler("wrong/subjects_file/path").update_sub_list())
 
     @classmethod
     def tearDownClass(cls):
-        remove(cls.smart_sch.db_path)
+        remove(cls.test_db)
 
 
 class SubjectsTest(unittest.TestCase):
     """TEST C.2"""
 
     smart_sch = None
+    test_db = "./test/test_server/Test.db"
     student_id, pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
 
     @classmethod
     def setUpClass(cls):
-        cls.smart_sch = SmartScheduler("./test/test_config.ini")
+        cls.smart_sch = SmartScheduler("http://127.0.0.1:8765/")
         cls.smart_sch.sign_up(cls.student_id, cls.pswrd, cls.pswrd)
         cls.smart_sch.login(cls.student_id, cls.pswrd)
 
@@ -165,7 +166,7 @@ class SubjectsTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        remove(cls.smart_sch.db_path)
+        remove(cls.test_db)
 
 
 class ClassTest(unittest.TestCase):
@@ -195,12 +196,13 @@ class ScheduleTest(unittest.TestCase):
     """TEST C.4"""
 
     smart_sch = None
+    test_db = "./test/test_server/Test.db"
     student_id, pswrd = str(randint(10**9, 10**10 - 1)), "test_password"
     test_class_id = "EMT1016_Lecture_Monday_1000_1200"
 
     @classmethod
     def setUpClass(cls):
-        cls.smart_sch = SmartScheduler("./test/test_config.ini")
+        cls.smart_sch = SmartScheduler("http://127.0.0.1:8765/")
         cls.smart_sch.sign_up(cls.student_id, cls.pswrd, cls.pswrd)
         cls.smart_sch.login(cls.student_id, cls.pswrd)
 
@@ -369,7 +371,7 @@ class ScheduleTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        remove(cls.smart_sch.db_path)
+        remove(cls.test_db)
 
 
 if __name__ == '__main__':

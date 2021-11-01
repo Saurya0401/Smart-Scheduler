@@ -1,4 +1,3 @@
-import csv
 import datetime as dt
 from ast import literal_eval
 from copy import deepcopy
@@ -38,21 +37,16 @@ def catch_db_err(db_cmd):
 class SmartScheduler:
     """Contains most of the core logic for the Smart Scheduler application."""
 
-    def __init__(self, config_file: str = None):
+    def __init__(self, test_server: str = None):
         """
         Initialise instance variables and get the database and subjects file path from the configuration file.
-        :param config_file: path to non default config file (for testing)
+        :param test_server: test server address
         """
 
         try:
-            self.db_path, self.subjects_path = Utils.paths(config_file or Utils.DEF_CONFIG_FILE)
-            if self.db_path.split("/")[-1] != "SmartScheduler.db":
-                raise CommonError("Database not found.")
-            self.db = SmartSchedulerDB(self.db_path)
-        except CommonDatabaseError:
-            raise FatalError("Could not access database.")
-        except CommonError as e:
-            raise FatalError(e.message)
+            self.db = SmartSchedulerDB(test_server or "http://127.0.0.1:8000/")
+        except CommonDatabaseError as e:
+            raise FatalError("[DBErr] " + e.args[0])
         self.session_id = None
         self.student_id = None
         self.curr_class_link = None
@@ -71,7 +65,7 @@ class SmartScheduler:
             raise ValueError("Student ID must have exactly 10 digits.")
         if not student_id.isnumeric():
             raise ValueError("Student ID must contain only numbers.")
-        return self.db.query_account_info(student_id, self.db.COL_STU_ID) != ()
+        return self.db.query_account_info(student_id, self.db.COL_STU_ID) != []
 
     def __chk_pswrd__(self, student_id: str, pswrd: str) -> bool:
         """
@@ -295,23 +289,10 @@ class SmartScheduler:
         self.curr_class_link = class_link
 
     def update_sub_list(self):
-        """
-        Update the list of subjects available for registration.
-
-        The subjects are extracted from the subjects file specified by config.ini and then merged with the list of
-        subjects currently stored in the database. Any error occurring during this process will raise a FatalError
-        exception which will result in the application immediately terminating.
-        """
+        """Update the list of subjects available for registration."""
 
         try:
-            with open(self.subjects_path) as sub_f:
-                reader = csv.DictReader(sub_f)
-                subs_info = [(sub["sub_code"], sub["sub_name"]) for sub in reader]
-            self.db.make_subs_list(subs_info)
-        except csv.Error:
-            raise FatalError("Subjects info file corrupted.")
-        except FileNotFoundError:
-            raise FatalError("Subjects info file not found.")
+            self.db.upd_sub_list()
         except CommonDatabaseError as e:
             raise FatalError(e.args[0])
 

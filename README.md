@@ -16,7 +16,7 @@ Each release will be a `.tar` file containing a single folder, `Smart Scheduler`
 application executable `SmartScheduler.exe`, a `config.ini` file, and a sub-folder titled `remote_server`.
 ## Application GUI Configuration
 The `config.ini` file contains configuration info for the GUI. It is not essential for proper functioning of the application, but the application will display a warning if the file is not found or corrupted. <br /> 
-The `config.ini` file can be used to change the colours, the font family and the font sizes used in the GUI. 
+This file can be used to change the colours, the font family and the font sizes used in the GUI. 
 ## Testing
 Python 3.8 and above is required for testing.
 #### Start Test Server

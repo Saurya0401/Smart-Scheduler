@@ -1,7 +1,6 @@
-import sqlite3 as sql
+import requests
 from threading import Thread
 from smartscheduler.exceptions import CommonDatabaseError
-
 
 __all__ = ["SmartSchedulerDB"]
 
@@ -19,20 +18,20 @@ class SmartSchedulerDB:
     COL_SUB_CODE = "Subject_code"
     COL_SUB_NAME = "Subject_name"
 
-    def __init__(self, db_path: str):
+    def __init__(self, server: str = None):
         """
         Initialise database manager
-        :param db_path: path to database
+        :param server: address of the server that contains the database
         """
 
-        self.db_path: str = db_path
+        self.server: str = server
         self.db_ret: list = []
+        self.db_err: bool = False
         self.db_wait: bool = False
-        self.db_err: str = ""
         self.__create_tables__()
 
     def __create_tables__(self):
-        """Create the required tables in the database, if they do not already exist"""
+        """Create the required tables in the database, if they do not already exist."""
 
         self.__send_cmd__(f'''
         CREATE TABLE IF NOT EXISTS {self.TAB_ACCOUNTS} 
@@ -44,6 +43,8 @@ class SmartSchedulerDB:
         ''')
         while self.db_wait:
             continue
+        if self.db_err:
+            raise CommonDatabaseError(self.db_ret)
         self.__send_cmd__(f'''
         CREATE TABLE IF NOT EXISTS {self.TAB_SUB_INFO}
         ({self.COL_SUB_CODE} text NOT NULL PRIMARY KEY,
@@ -51,43 +52,52 @@ class SmartSchedulerDB:
         ''')
         while self.db_wait:
             continue
+        if self.db_err:
+            raise CommonDatabaseError(self.db_ret)
 
-    def __db_cmd__(self, cmd: str, params: dict = None):
+    def __db_cmd__(self, cmd: str, params: list or None, upd_subs: bool):
         """
-        Send a SQL command to the database. If the command is a query, store the result in self.db_ret
-        :param cmd: the SQL command
-        :param params: optional parameters for the SQL command
+        Send a SQL command to the database, encapsulated in a HTTP POST request made to self.server.
+
+        The SQL command and any additional command parameters are sent in JSON format.
+        :param cmd: A SQL command
+        :param params: Any additional parameters for the SQL command
+        :param upd_subs: A special flag that signals the server to update the list of available subjects
         """
 
-        conn = None
         try:
-            conn = sql.Connection(self.db_path)
-            curs = conn.cursor()
-            curs.execute(cmd, params) if params is not None else curs.execute(cmd)
-        except (sql.IntegrityError, sql.OperationalError, sql.ProgrammingError) as e:
-            self.db_err = e.args[0]
-        else:
-            conn.commit()
-            self.db_ret = curs.fetchall()
+            if upd_subs:
+                request_json = {"cmd": cmd, "cmd_params": ["upd_subs"]}
+            else:
+                request_json = {"cmd": cmd, "cmd_params": params}
+            server_resp: requests.Response = requests.post(self.server, json=request_json)
+            server_resp.raise_for_status()
+            db_resp = server_resp.json()
+            self.db_ret = db_resp["db_ret"]
+            self.db_err = db_resp["db_err"]
+        except requests.ConnectionError:
+            self.db_err = True
+            self.db_ret = "Cannot reach database (server connection failed)."
+        except requests.HTTPError as e:
+            self.db_err = True
+            self.db_ret = e.args[0]
         finally:
-            if conn:
-                conn.close()
             self.db_wait = False
 
-    def __send_cmd__(self, cmd: str, params: dict = None):
+    def __send_cmd__(self, cmd: str, params: list = None, upd_subs: bool = False):
         """
-        Initialise a new thread to send a SQL command to the database
+        Initialise a new thread to send a SQL command to the database.
         :param cmd: the SQL command
         :param params: optional parameters for the SQL command
         """
 
-        self.db_err = ""
+        self.db_err = False
         self.db_wait = True
-        Thread(target=self.__db_cmd__, args=(cmd, params)).start()
+        Thread(target=self.__db_cmd__, args=(cmd, params, upd_subs)).start()
 
     def retrieve_all(self, table: str) -> list:
         """
-        Retrieve all data from a specific table
+        Retrieve all data from a specific table.
         :param table: the table to retrieve data from
         :return: a list containing tuples, one for each record in the table
         """
@@ -96,55 +106,53 @@ class SmartSchedulerDB:
         while self.db_wait:
             continue
         if self.db_err:
-            raise CommonDatabaseError(self.db_err)
+            raise CommonDatabaseError(self.db_ret)
         return self.db_ret
 
     def new_account(self, s_id: str, pass_hash: str, sch: str, subs: str):
         """
-        Add a new account to accounts table in the database
+        Add a new account to accounts table in the database.
         :param s_id: the student ID of the account holder
         :param pass_hash: the account's password hash
         :param sch: the account's schedule
         :param subs: the account's registered subjects
         """
 
-        self.__send_cmd__(f"INSERT INTO {self.TAB_ACCOUNTS} VALUES (:s_id, :pass_hash, :sch, :subs, :session)",
-                          {"s_id": s_id, "pass_hash": pass_hash, "sch": sch, "subs": subs, "session": "0"})
+        self.__send_cmd__(f"INSERT INTO {self.TAB_ACCOUNTS} VALUES (?, ?, ?, ?, ?)", [s_id, pass_hash, sch, subs, "0"])
         while self.db_wait:
             continue
         if self.db_err:
-            raise CommonDatabaseError(self.db_err)
+            raise CommonDatabaseError(self.db_ret)
 
     def query_account_info(self, s_id: str, query_col) -> tuple:
         """
-        Retrieve a specific account information field in the accounts table via a SQL query
+        Retrieve a specific account information field in the accounts table via a SQL query.
         :param s_id: the look up key for the SQL query
         :param query_col: the account information column to query
         :return: a tuple containing the field's information
         """
 
-        self.__send_cmd__(f"SELECT {query_col} FROM {self.TAB_ACCOUNTS} WHERE {self.COL_STU_ID}=:s_id",
-                          {"s_id": s_id})
+        self.__send_cmd__(f"SELECT {query_col} FROM {self.TAB_ACCOUNTS} WHERE {self.COL_STU_ID}=?", [s_id])
         while self.db_wait:
             continue
         if self.db_err:
-            raise CommonDatabaseError(self.db_err)
-        return self.db_ret[0] if self.db_ret else ()
+            raise CommonDatabaseError(self.db_ret)
+        return self.db_ret[0] if self.db_ret else []
 
     def update_account_info(self, s_id: str, update_col: str, update_val: str):
         """
-        Update a specific account information field in the accounts table via a SQL command
+        Update a specific account information field in the accounts table via a SQL command.
         :param s_id: the look up key for the SQL command
         :param update_col: the account information column to update
         :param update_val: the updated value
         """
 
-        self.__send_cmd__(f"UPDATE {self.TAB_ACCOUNTS} SET {update_col}=:val WHERE {self.COL_STU_ID}=:s_id",
-                          {"s_id": s_id, "val": update_val})
+        self.__send_cmd__(f"UPDATE {self.TAB_ACCOUNTS} SET {update_col}=? WHERE {self.COL_STU_ID}=?",
+                          [update_val, s_id])
         while self.db_wait:
             continue
         if self.db_err:
-            raise CommonDatabaseError(self.db_err)
+            raise CommonDatabaseError(self.db_ret)
 
     def delete_account(self, s_id: str):
         """
@@ -152,32 +160,20 @@ class SmartSchedulerDB:
         :param s_id: the look up key for the SQL command
         """
 
-        self.__send_cmd__(f"DELETE FROM {self.TAB_ACCOUNTS} WHERE {self.COL_STU_ID}=:s_id", {"s_id": s_id})
+        self.__send_cmd__(f"DELETE FROM {self.TAB_ACCOUNTS} WHERE {self.COL_STU_ID}=?", [s_id])
         while self.db_wait:
             continue
         if self.db_err:
-            raise CommonDatabaseError(self.db_err)
+            raise CommonDatabaseError(self.db_ret)
 
-    def make_subs_list(self, subs_info: list):
-        """
-        Create or update the subjects table with the latest available subjects information
-        :param subs_info: a list containing tuples like (subject_code, subject_name)
-        """
-
-        conn = None
-        try:
-            conn = sql.Connection(self.db_path)
-            conn.executemany(
-                f"INSERT INTO {self.TAB_SUB_INFO} ({self.COL_SUB_CODE}, {self.COL_SUB_NAME}) VALUES (?, ?)",
-                subs_info)
-            conn.commit()
-        except sql.IntegrityError:
-            return
-        except (sql.OperationalError, sql.ProgrammingError) as e:
-            raise CommonDatabaseError(e.args[0])
-        finally:
-            if conn:
-                conn.close()
+    def upd_sub_list(self):
+        """Request the server to update the current list of available subjects."""
+        self.__send_cmd__(f"INSERT OR REPLACE INTO {self.TAB_SUB_INFO} ({self.COL_SUB_CODE}, {self.COL_SUB_NAME}) "
+                          f"VALUES (?, ?)", upd_subs=True)
+        while self.db_wait:
+            pass
+        if self.db_err:
+            raise CommonDatabaseError(self.db_ret)
 
 
 if __name__ == "__main__":

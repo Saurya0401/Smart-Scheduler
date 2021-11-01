@@ -24,6 +24,6 @@ smartscheduler/**/*.db
 test/**/*.db
 
 # test folders and files
-test*.py
+/test*.py
 smartscheduler/test*/
 smartscheduler/test*.py

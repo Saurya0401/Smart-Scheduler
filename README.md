@@ -14,12 +14,23 @@ The beta versions of this application are not production ready and are meant for
 The releases of this application can be found in [releases](https://github.com/Saurya0401/Smart-Scheduler/releases), remember to download a beta version release. <br />
 Each release will be a `.tar` file containing a single folder, `Smart Scheduler`. This folder will contain the 
 application executable `SmartScheduler.exe`, a `config.ini` file, and a sub-folder titled `remote_server`.
-## Application Configuration
-The `config.ini` file is vital to the running of the application and it contains the paths to the database and the available 
-list of subjects file, along with several GUI parameters. By default, the database and subjects file are located in a placeholder 
-folder called `remote_server`. The `config.ini` file can later be modified to point to the location of the actual database and subjects file. <br />
-Other configurations that can be changed include the colours, the font family and the font sizes used in the GUI. 
+## Application GUI Configuration
+The `config.ini` file contains configuration info for the GUI. It is not essential for proper functioning of the application, but the application will display a warning if the file is not found or corrupted. <br /> 
+The `config.ini` file can be used to change the colours, the font family and the font sizes used in the GUI. 
 ## Testing
+Python 3.8 and above is required for testing.
+#### Start Test Server
+Start test server in a new console window:
+```cmd
+cd path/to/base/directory
+python -m test.test_server.test_server
+```
+If the test server starts successfully, the console will print:
+```cmd
+Test server started.
+```
+#### Run Tests
+Open a new console window before running any tests.
 Run all tests: 
 ```cmd
 cd path/to/base/directory
@@ -29,6 +40,11 @@ Run individual tests:
 ```cmd
 cd path/to/base/directory
 python -m unittest -v test.<test_file>
+```
+#### Stop Test Server
+Go back to the test server console, and press `Ctrl` + `C` to stop the test server. The console should print the following:
+```cmd
+Test server terminated by Ctrl + C.
 ```
 ## Building
 Execute the `build.bat` file[^1].
@@ -40,4 +56,4 @@ archive inside `releases`. <br />
 
 [^1]:  It is advisable to exclude the directory containing `build.bat` from antivirus programs as they might prevent 
 `pyinstaller` from getting access to resources necessary for building the executable binary.
-[^2]:  There is a chance that antivirus software may detect the executable binary as false positive trojan.
+[^2]:  There is a chance that antivirus software may detect the executable binary as a false positive trojan.

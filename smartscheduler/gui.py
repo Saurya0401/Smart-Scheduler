@@ -996,7 +996,10 @@ class MainWindow(tk.Tk):
                     self.__rem_loading__()
                     GUtils.disp_msg("Could not delete account.\n" + e.args[0], "err", self)
             else:
-                self.__logout__()
+                self.stu_id.set("")
+                self.loading_win.destroy()
+                self.destroy()
+                LoginWindow(self.smart_sch).mainloop()
 
     def __refresh_class_info__(self, schedule: Schedule):
         """Attempts to refresh class and schedule information and displays any errors encountered."""

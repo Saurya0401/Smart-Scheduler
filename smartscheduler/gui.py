@@ -103,6 +103,12 @@ class GUtils:
             loading_win.deiconify()
         loading_win.after(100, lambda: gui_cmd(*args, **kwargs))
 
+    @staticmethod
+    def destroy_all(parent: tk.BaseWidget or tk.Tk):
+        for widget in parent.winfo_children():
+            widget.destroy()
+        parent.destroy()
+
 
 class Colours:
     """The colours used in the GUI, retrieved from config.ini."""
@@ -227,7 +233,7 @@ class SubjectEditor(tk.Toplevel):
         self.reg_sub_b = tk.Button(self.btn_f, text="Register Subject", **Style.def_btn(26),
                                    command=self.__reg_sub__)
         self.exit_b = tk.Button(self.btn_f, text="Save and Exit", **Style.def_btn(26, bg=Colours.M_RED),
-                                command=self.__update__)
+                                command=self.__upd_subs__)
 
         self.main_f.grid(sticky="nsew")
         self.reg_subs_f.grid(row=1, column=1, sticky="nsew", **Padding.default())
@@ -271,7 +277,7 @@ class SubjectEditor(tk.Toplevel):
         """
 
         def __close__():
-            inp_w.destroy()
+            GUtils.destroy_all(inp_w)
             GUtils.lift_win(self)
 
         def __register__():
@@ -297,7 +303,7 @@ class SubjectEditor(tk.Toplevel):
                 error_l = tk.Label(inp_f, text=error, **Style.def_txt(fg=Colours.M_RED))
                 error_l.grid(row=1, column=1, sticky="w", **Padding.pad((Padding.DEF_X, (Padding.DEF_Y, 0))))
             else:
-                inp_w.destroy()
+                GUtils.destroy_all(inp_w)
                 return self.disp_subjects()
 
         init_s_code, init_c_type = self._subjects.sub_code_and_type(edit_reg_code) \
@@ -363,6 +369,8 @@ class SubjectEditor(tk.Toplevel):
         Refreshes schedule if database is successfully updated.
         """
 
+        loading_win = GUtils.loading_win(self, "Saving registered subjects")
+        loading_win.update()
         try:
             reg_subs_changed = self._subjects.reg_subs_changed()
             if reg_subs_changed:
@@ -372,16 +380,12 @@ class SubjectEditor(tk.Toplevel):
                 GUtils.disp_msg("You have been logged out.", "err", self)
                 self.__close__(check_changed=False)
             else:
+                loading_win.destroy()
                 GUtils.disp_msg("Could not update registered subjects.\n" + e.args[0], "err", self)
         else:
             if reg_subs_changed:
                 self._refresh_f()
             self.__close__(check_changed=False)
-
-    def __update__(self):
-        """Display a loading window to mask execution of database update function."""
-
-        GUtils.disp_loading(GUtils.loading_win(self), self.__upd_subs__)
 
     def __close__(self, check_changed: bool = True):
         """
@@ -391,9 +395,9 @@ class SubjectEditor(tk.Toplevel):
 
         if self._subjects.reg_subs_changed() and check_changed:
             if GUtils.disp_conf("Exit", "You have unsaved changes, exit?", self):
-                self.destroy()
+                GUtils.destroy_all(self)
         else:
-            self.destroy()
+            GUtils.destroy_all(self)
 
 
 class ScheduleEditor:
@@ -413,6 +417,8 @@ class ScheduleEditor:
 
         try:
             self.schedule = schedule or Schedule(self._smart_sch)
+            self.disp_subs = {self.schedule.get_class_name(reg_code=reg_code): reg_code for reg_code in
+                              self._smart_sch.get_reg_subjects().keys()}
         except CommonError:
             raise
 
@@ -432,7 +438,7 @@ class ScheduleEditor:
             self._add_class_b = tk.Button(self._btn_f, text="Add Class", **Style.def_btn(26),
                                           command=self.__add_class__)
             self._exit_b = tk.Button(self._btn_f, text="Save and Exit", **Style.def_btn(26, Colours.M_RED),
-                                     command=self.__update__)
+                                     command=self.__upd_sch__)
 
             self._main_f.grid(sticky="nsew")
             self._schedule_n.grid(row=1, column=1, sticky="nsew", **Padding.default())
@@ -492,7 +498,7 @@ class ScheduleEditor:
         """
 
         def close_reg_win():
-            inp_w.destroy()
+            GUtils.destroy_all(inp_w)
             GUtils.lift_win(self._root)
 
         def reg_class():
@@ -511,7 +517,7 @@ class ScheduleEditor:
                     raise CommonError("Please select a valid start time.")
                 if not c_eth or not c_etm:
                     raise CommonError("Please select a valid end time.")
-                sub_code, class_type = Subjects.sub_code_and_type(disp_subs[class_name.get()])
+                sub_code, class_type = Subjects.sub_code_and_type(self.disp_subs[class_name.get()])
                 day = class_day.get()
                 start = class_sth.get() + class_stm.get()
                 end = class_eth.get() + class_etm.get()
@@ -524,7 +530,7 @@ class ScheduleEditor:
                 tk.Label(inp_f, text=e_.args[0], **Style.def_txt(fg=Colours.M_RED)) \
                     .grid(row=1, column=1, sticky="w", **Padding.pad((Padding.DEF_X, (Padding.DEF_Y, 0))))
             else:
-                inp_w.destroy()
+                GUtils.destroy_all(inp_w)
                 self.__refresh_sch__()
 
         inp_w = tk.Toplevel(self._main_f)
@@ -535,21 +541,10 @@ class ScheduleEditor:
         class_stm = tk.StringVar(inp_w)
         class_eth = tk.StringVar(inp_w)
         class_etm = tk.StringVar(inp_w)
-        try:
-            disp_subs = {self.schedule.get_class_name(reg_code=reg_code): reg_code for reg_code in
-                         self._smart_sch.get_reg_subjects().keys()}
-        except CommonError as e:
-            close_reg_win()
-            if e.flag == "l_out":
-                GUtils.disp_msg("You have been logged out.", "err", self._root)
-                self.__close__(check_changed=False)
-            else:
-                GUtils.disp_msg("Could not retrieve subjects info.\n" + e.args[0], "err", self._root)
-            return
 
         inp_f = tk.Frame(inp_w)
         class_l = tk.Label(inp_f, text="Select class:", **Style.def_txt())
-        class_c = ttk.Combobox(inp_f, **Style.def_combo(list(disp_subs.keys()), class_name, width=55))
+        class_c = ttk.Combobox(inp_f, **Style.def_combo(list(self.disp_subs.keys()), class_name, width=55))
         if edit_class is not None:
             class_c.set(self.schedule.get_class_name(edit_class))
         time_f = tk.Frame(inp_f)
@@ -618,6 +613,8 @@ class ScheduleEditor:
         Refreshes schedule if database is successfully updated.
         """
 
+        loading_win = GUtils.loading_win(self._root, "Saving schedule")
+        loading_win.update()
         try:
             schedule_changed = self.schedule.schedule_changed()
             if schedule_changed:
@@ -627,16 +624,12 @@ class ScheduleEditor:
                 GUtils.disp_msg("You have been logged out.", "err", self._root)
                 self.__close__(check_changed=False)
             else:
+                loading_win.destroy()
                 GUtils.disp_msg("Could not update schedule.\n" + e.args[0], "err", self._root)
         else:
             if schedule_changed:
                 self._refresh_f(self)
             self.__close__(check_changed=False)
-
-    def __update__(self):
-        """Insert a loading window to mask execution of database update function."""
-
-        GUtils.disp_loading(GUtils.loading_win(self._root, "Saving schedule"), self.__upd_sch__)
 
     def __close__(self, check_changed=True):
         """
@@ -646,9 +639,9 @@ class ScheduleEditor:
 
         if self.schedule.schedule_changed() and check_changed:
             if GUtils.disp_conf("Exit", "You have unsaved changes, exit?", self._root):
-                self._root.destroy()
+                GUtils.destroy_all(self._root)
         else:
-            self._root.destroy()
+            GUtils.destroy_all(self._root)
 
     def build_schedule(self, schedule_n: ttk.Notebook = None) -> ttk.Notebook:
         """
@@ -751,7 +744,7 @@ class LoginWindow(tk.Toplevel):
         :param action: the new action to change to
         """
 
-        self.destroy()
+        GUtils.destroy_all(self)
         LoginWindow(self.root, self.smart_sch, action=action).mainloop()
 
     def __action__(self):
@@ -775,7 +768,7 @@ class LoginWindow(tk.Toplevel):
             GUtils.disp_msg(e.args[0], "err", self)
         else:
             GUtils.disp_msg("Password changed successfully.", "info", self)
-            self.destroy()
+            GUtils.destroy_all(self)
             LoginWindow(self.root, self.smart_sch).mainloop()
 
     def __login__(self):
@@ -796,7 +789,7 @@ class LoginWindow(tk.Toplevel):
             else:
                 GUtils.disp_msg(e.args[0], "err", self)
         else:
-            self.destroy()
+            GUtils.destroy_all(self)
             temp_loading = GUtils.loading_win(self.root, "Initialising")
             GUtils.disp_loading(temp_loading, lambda: MainWindow(self.root, self.smart_sch, temp_loading).mainloop())
 
@@ -810,11 +803,11 @@ class LoginWindow(tk.Toplevel):
             GUtils.disp_msg(e.args[0], "err", self)
         else:
             GUtils.disp_msg("Profile created successfully, you can now login.", "info", self)
-            self.destroy()
+            GUtils.destroy_all(self)
             LoginWindow(self.root, self.smart_sch).mainloop()
 
     def __close__(self):
-        self.root.destroy()
+        GUtils.destroy_all(self.root)
 
 
 class MainWindow(tk.Toplevel):
@@ -1012,8 +1005,7 @@ class MainWindow(tk.Toplevel):
                     GUtils.disp_msg("Could not delete account.\n" + e.args[0], "err", self)
             else:
                 self.stu_id.set("")
-                self.loading_win.destroy()
-                self.destroy()
+                GUtils.destroy_all(self)
                 LoginWindow(self.root, self.smart_sch).mainloop()
 
     def __refresh_class_info__(self, schedule: Schedule):
@@ -1105,15 +1097,15 @@ class MainWindow(tk.Toplevel):
             self.__rem_loading__()
             if exit_prog:
                 if GUtils.disp_conf("Logout Error", f"Unable to logout properly.\n{e.args[0]}\nExit anyway?", self):
-                    self.root.destroy()
+                    GUtils.destroy_all(self.root)
             else:
                 GUtils.disp_msg("Unable to logout properly.\n" + e.args[0], "err", self)
         else:
             self.stu_id.set("")
             if exit_prog:
-                self.root.destroy()
+                GUtils.destroy_all(self.root)
             else:
-                self.destroy()
+                GUtils.destroy_all(self)
                 LoginWindow(self.root, self.smart_sch).mainloop()
 
     def __close__(self):
@@ -1139,8 +1131,9 @@ def main():
         LoginWindow(root, smart_sch)
         loading_win.destroy()
     except FatalError as e:
+        loading_win.destroy()
         GUtils.disp_msg(e.args[0], "err", root)
-        root.destroy()
+        GUtils.destroy_all(root)
         raise SystemExit
     else:
         root.mainloop()

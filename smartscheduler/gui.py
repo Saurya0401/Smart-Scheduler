@@ -40,16 +40,17 @@ class GUtils:
         return messagebox.askyesno(title, msg, parent=parent)
 
     @staticmethod
-    def loading_win(parent: tk.Tk or tk.Toplevel) -> tk.Toplevel:
+    def loading_win(parent: tk.Tk or tk.Toplevel, msg: str = "Loading") -> tk.Toplevel:
         """
         Create and return a tk.TopLevel window that indicates a "loading" action.
-        :param parent: which window this TopLevel window should belong to
+        :param parent: which window this TopLevel window should belong
+        :param msg: the text to display, default is "Loading"
         :return: a tk.TopLevel window
         """
 
         win = tk.Toplevel(master=parent)
         win.overrideredirect(True)
-        wait_l = tk.Label(master=win, text="Loading, please wait...", **Style.def_txt(font=Font.HEADING))
+        wait_l = tk.Label(master=win, text=f"{msg}, please wait...", **Style.def_txt(font=Font.HEADING))
         wait_l.pack(expand=1, fill=tk.BOTH)
         win.geometry("300x100+%d+%d" % GUtils.win_pos(win, 0.4, 0.4))
         return win
@@ -205,7 +206,7 @@ class SubjectEditor(tk.Toplevel):
         try:
             self._subjects = Subjects(smart_sch)
         except CommonError:
-            self.withdraw()
+            self.destroy()
             raise
 
         self._subjects_list = {sub_code: f"{sub_code} - {sub_name}" for sub_code, sub_name in
@@ -233,10 +234,6 @@ class SubjectEditor(tk.Toplevel):
         self.disp_subjects()
         self.geometry("+%d+%d" % GUtils.win_pos(self, 0.35, 0.35))
         GUtils.lift_win(self)
-
-    @property
-    def reg_subs_changed(self) -> bool:
-        return self._subjects.reg_subs_changed()
 
     def disp_subjects(self):
         """Refreshes list of displayed subjects."""
@@ -363,7 +360,8 @@ class SubjectEditor(tk.Toplevel):
         """
 
         try:
-            if self.reg_subs_changed:
+            reg_subs_changed = self._subjects.reg_subs_changed()
+            if reg_subs_changed:
                 self._subjects.update_subjects()
         except CommonError as e:
             if e.flag == "l_out":
@@ -372,7 +370,8 @@ class SubjectEditor(tk.Toplevel):
             else:
                 GUtils.disp_msg("Could not update registered subjects.\n" + e.args[0], "err", self)
         else:
-            self._refresh_f()
+            if reg_subs_changed:
+                self._refresh_f()
             self.__close__(check_changed=False)
 
     def __update__(self):
@@ -386,7 +385,7 @@ class SubjectEditor(tk.Toplevel):
         :param check_changed: optional, will show a warning if registered subjects have been modified
         """
 
-        if self.reg_subs_changed and check_changed:
+        if self._subjects.reg_subs_changed() and check_changed:
             if GUtils.disp_conf("Exit", "You have unsaved changes, exit?", self):
                 self.destroy()
         else:
@@ -616,7 +615,8 @@ class ScheduleEditor:
         """
 
         try:
-            if self.schedule.schedule_changed():
+            schedule_changed = self.schedule.schedule_changed()
+            if schedule_changed:
                 self.schedule.update_schedule()
         except CommonError as e:
             if e.flag == "l_out":
@@ -625,13 +625,14 @@ class ScheduleEditor:
             else:
                 GUtils.disp_msg("Could not update schedule.\n" + e.args[0], "err", self._root)
         else:
-            self._refresh_f(self)
+            if schedule_changed:
+                self._refresh_f(self)
             self.__close__(check_changed=False)
 
     def __update__(self):
         """Insert a loading window to mask execution of database update function."""
 
-        GUtils.disp_loading(GUtils.loading_win(self._root), self.__upd_sch__)
+        GUtils.disp_loading(GUtils.loading_win(self._root, "Saving schedule"), self.__upd_sch__)
 
     def __close__(self, check_changed=True):
         """

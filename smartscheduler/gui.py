@@ -58,7 +58,7 @@ class GUtils:
         win.overrideredirect(True)
         wait_l = tk.Label(master=win, text=f"{msg}, please wait...", **Style.def_txt(font=Font.HEADING))
         wait_l.pack(expand=1, fill=tk.BOTH)
-        win.geometry("300x100+%d+%d" % GUtils.win_pos(win, 0.4, 0.4))
+        win.geometry("400x100+%d+%d" % GUtils.win_pos(win, 0.4, 0.4))
         return win
 
     @staticmethod
@@ -667,17 +667,19 @@ class ScheduleEditor:
         return new_schedule_n
 
 
-class LoginWindow(tk.Tk):
+class LoginWindow(tk.Toplevel):
     """Displays a window for the user to login, sign up, or change password."""
 
-    def __init__(self, smart_sch: SmartScheduler, action: str = "login"):
+    def __init__(self, root: tk.Tk, smart_sch: SmartScheduler, action: str = "login"):
         """
         Initialises widgets and builds login, sign up, or change password window.
+        :param root: the root tk.Tk instance
         :param smart_sch: an instance of SmartScheduler to serve as the backend for executing any action
         :param action: indicates whether the window is for login, sign up or change password
         """
 
-        super().__init__()
+        super().__init__(master=root)
+        self.root = root
         self.action = action
         self.smart_sch = smart_sch
         self.loading_win = GUtils.loading_win(self)
@@ -685,6 +687,7 @@ class LoginWindow(tk.Tk):
 
         self.title(self.action.title())
         self.resizable(False, False)
+        self.protocol("WM_DELETE_WINDOW", self.__close__)
 
         self.inp_s_id = tk.StringVar(self)
         self.inp_pswrd = tk.StringVar(self)
@@ -749,7 +752,7 @@ class LoginWindow(tk.Tk):
         """
 
         self.destroy()
-        LoginWindow(self.smart_sch, action=action).mainloop()
+        LoginWindow(self.root, self.smart_sch, action=action).mainloop()
 
     def __action__(self):
         """Inserts a loading screen and executes a certain action depending on self.__action__."""
@@ -773,7 +776,7 @@ class LoginWindow(tk.Tk):
         else:
             GUtils.disp_msg("Password changed successfully.", "info", self)
             self.destroy()
-            LoginWindow(self.smart_sch).mainloop()
+            LoginWindow(self.root, self.smart_sch).mainloop()
 
     def __login__(self):
         """Attempts to login and displays any errors encountered."""
@@ -794,7 +797,8 @@ class LoginWindow(tk.Tk):
                 GUtils.disp_msg(e.args[0], "err", self)
         else:
             self.destroy()
-            MainWindow(self.smart_sch).mainloop()
+            temp_loading = GUtils.loading_win(self.root, "Initialising")
+            GUtils.disp_loading(temp_loading, lambda: MainWindow(self.root, self.smart_sch, temp_loading).mainloop())
 
     def __sign_up__(self):
         """Attempts to sign up and displays any errors encountered."""
@@ -807,20 +811,25 @@ class LoginWindow(tk.Tk):
         else:
             GUtils.disp_msg("Profile created successfully, you can now login.", "info", self)
             self.destroy()
-            LoginWindow(self.smart_sch).mainloop()
+            LoginWindow(self.root, self.smart_sch).mainloop()
+
+    def __close__(self):
+        self.root.destroy()
 
 
-class MainWindow(tk.Tk):
+class MainWindow(tk.Toplevel):
     """Displays the main window through which the user can avail most of Smart Scheduler's functionality."""
 
-    def __init__(self, smart_sch: SmartScheduler):
+    def __init__(self, root: tk.Tk, smart_sch: SmartScheduler, temp_loading: tk.Toplevel):
         """
         Initialises widgets and builds the main window.
+        :param root: the root tk.Tk instance
         :param smart_sch: An instance of SmartScheduler to serve as the backend for various functionality.
+        :param temp_loading: A temporary loading window that is destroyed as soon as this window is ready
         """
 
-        super().__init__()
-
+        super().__init__(master=root)
+        self.root = root
         self.smart_sch = smart_sch
         self.c_name = tk.StringVar(self, "")
         self.c_duration = tk.StringVar(self, "")
@@ -884,6 +893,7 @@ class MainWindow(tk.Tk):
 
         self.__build__()
         self.__refresh__()
+        temp_loading.destroy()
 
         self.geometry("+%d+%d" % GUtils.win_pos(self, 0.3, 0.2))
 
@@ -1004,7 +1014,7 @@ class MainWindow(tk.Tk):
                 self.stu_id.set("")
                 self.loading_win.destroy()
                 self.destroy()
-                LoginWindow(self.smart_sch).mainloop()
+                LoginWindow(self.root, self.smart_sch).mainloop()
 
     def __refresh_class_info__(self, schedule: Schedule):
         """Attempts to refresh class and schedule information and displays any errors encountered."""
@@ -1095,16 +1105,16 @@ class MainWindow(tk.Tk):
             self.__rem_loading__()
             if exit_prog:
                 if GUtils.disp_conf("Logout Error", f"Unable to logout properly.\n{e.args[0]}\nExit anyway?", self):
-                    self.loading_win.destroy()
-                    self.destroy()
+                    self.root.destroy()
             else:
                 GUtils.disp_msg("Unable to logout properly.\n" + e.args[0], "err", self)
         else:
             self.stu_id.set("")
-            self.loading_win.destroy()
-            self.destroy()
-            if not exit_prog:
-                LoginWindow(self.smart_sch).mainloop()
+            if exit_prog:
+                self.root.destroy()
+            else:
+                self.destroy()
+                LoginWindow(self.root, self.smart_sch).mainloop()
 
     def __close__(self):
         """Calls self.__logout__ with the intention of exiting the application."""
@@ -1120,16 +1130,20 @@ def main():
     displaying the error in a pop up dialog box.
     """
 
+    root = tk.Tk()
+    root.withdraw()
+    loading_win = GUtils.loading_win(root, "Starting")
+    loading_win.update()
     try:
         smart_sch = SmartScheduler()
-        app = LoginWindow(smart_sch)
+        LoginWindow(root, smart_sch)
+        loading_win.destroy()
     except FatalError as e:
-        temp = GUtils.hidden_win()
-        GUtils.disp_msg(e.args[0], "err", temp)
-        temp.destroy()
+        GUtils.disp_msg(e.args[0], "err", root)
+        root.destroy()
         raise SystemExit
     else:
-        app.mainloop()
+        root.mainloop()
 
 
 if __name__ == "__main__":

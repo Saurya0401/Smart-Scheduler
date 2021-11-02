@@ -40,6 +40,12 @@ class GUtils:
         return messagebox.askyesno(title, msg, parent=parent)
 
     @staticmethod
+    def hidden_win(parent: tk.Tk = None):
+        win = tk.Toplevel(master=parent) if parent else tk.Tk()
+        win.withdraw()
+        return win
+
+    @staticmethod
     def loading_win(parent: tk.Tk or tk.Toplevel, msg: str = "Loading") -> tk.Toplevel:
         """
         Create and return a tk.TopLevel window that indicates a "loading" action.
@@ -104,8 +110,7 @@ class Colours:
     try:
         BG, TEXT, INPUT, M_BLUE, M_RED = Utils.colours(Utils.DEF_CONFIG_FILE)
     except FatalError as e:
-        temp = tk.Tk()
-        temp.withdraw()
+        temp = GUtils.hidden_win()
         GUtils.disp_msg("Unable to retrieve colour hex codes from config.ini."
                         "\nSwitching to default values.", "warn", temp)
         BG, TEXT, INPUT, M_BLUE, M_RED = "#f0f0f0", "#000000", "#ffffff", "#0750a4", "#ed1b2f"
@@ -118,8 +123,7 @@ class Font:
     try:
         DEF_FAMILY, NORMAL, HEADING, TITLE = Utils.fonts(Utils.DEF_CONFIG_FILE)
     except FatalError as e:
-        temp = tk.Tk()
-        temp.withdraw()
+        temp = GUtils.hidden_win()
         GUtils.disp_msg("Unable to retrieve font family and size values from config.ini."
                         "\nSwitching to default values.", "warn", temp)
         DEF_FAMILY = "Helvetica"
@@ -1118,13 +1122,13 @@ def main():
 
     try:
         smart_sch = SmartScheduler()
+        app = LoginWindow(smart_sch)
     except FatalError as e:
-        temp = tk.Tk()
-        temp.withdraw()
+        temp = GUtils.hidden_win()
         GUtils.disp_msg(e.args[0], "err", temp)
+        temp.destroy()
         raise SystemExit
     else:
-        app = LoginWindow(smart_sch)
         app.mainloop()
 
 

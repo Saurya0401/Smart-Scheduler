@@ -690,13 +690,13 @@ class LoginWindow(tk.Toplevel):
         self.stu_id_l = tk.Label(self.login_f, text="Student ID:", **Style.def_txt())
         self.stu_id_e = tk.Entry(self.login_f, textvariable=self.inp_s_id, **Style.def_txt())
         self.pswrd_l = tk.Label(self.login_f, text="Password:", **Style.def_txt())
-        self.pswrd_e = tk.Entry(self.login_f, textvariable=self.inp_pswrd, **Style.def_txt())
+        self.pswrd_e = tk.Entry(self.login_f, textvariable=self.inp_pswrd, show="*", **Style.def_txt())
         if self.action == "change password":
             self.n_pswrd_l = tk.Label(self.login_f, text="New Password:", **Style.def_txt())
-            self.n_pswrd_e = tk.Entry(self.login_f, textvariable=self.inp_n_pswrd, **Style.def_txt())
+            self.n_pswrd_e = tk.Entry(self.login_f, textvariable=self.inp_n_pswrd, show="*", **Style.def_txt())
         if self.action == "sign up" or action == "change password":
             self.c_pswrd_l = tk.Label(self.login_f, text="Confirm:", **Style.def_txt())
-            self.c_pswrd_e = tk.Entry(self.login_f, textvariable=self.inp_c_pswrd, **Style.def_txt())
+            self.c_pswrd_e = tk.Entry(self.login_f, textvariable=self.inp_c_pswrd, show="*", **Style.def_txt())
         self.btn_f = tk.Frame(self.login_f)
         if self.action == "login":
             self.login_b = tk.Button(self.btn_f, text="Login", **Style.def_btn(width=15), command=self.__action__)
@@ -765,6 +765,7 @@ class LoginWindow(tk.Toplevel):
             self.loading_win.withdraw()
             GUtils.disp_msg(e.args[0], "err", self)
         else:
+            self.loading_win.withdraw()
             GUtils.disp_msg("Password changed successfully.", "info", self)
             GUtils.destroy_all(self)
             LoginWindow(self.root, self.smart_sch).mainloop()
@@ -800,6 +801,7 @@ class LoginWindow(tk.Toplevel):
             self.loading_win.withdraw()
             GUtils.disp_msg(e.args[0], "err", self)
         else:
+            self.loading_win.withdraw()
             GUtils.disp_msg("Profile created successfully, you can now login.", "info", self)
             GUtils.destroy_all(self)
             LoginWindow(self.root, self.smart_sch).mainloop()

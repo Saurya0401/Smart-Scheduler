@@ -418,6 +418,7 @@ class Schedule:
     """Manages the schedule of an account."""
 
     CLASS_DAYS = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"}
+    CLASS_DAYS_IDX = {day: day_idx for day_idx, day in CLASS_DAYS.items()}
     CLASS_HOURS = ("08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22")
     CLASS_MINS = ("00", "15", "30", "45")
 
@@ -615,6 +616,15 @@ class Schedule:
         """
 
         return Schedule.CLASS_DAYS[day_idx]
+
+    @staticmethod
+    def day2int(day: str):
+        """
+        Convert a day to its integer representation.
+        :param day: the day
+        :return: the day's integer representation
+        """
+        return Schedule.CLASS_DAYS_IDX[day]
 
 
 if __name__ == "__main__":

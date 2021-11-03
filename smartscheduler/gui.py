@@ -425,13 +425,14 @@ class ScheduleEditor:
         if self.edit_mode:
             if not self._reg_subs:
                 raise CommonError(flag="no_subs")
+            self._edit_day = Utils.curr_day()
             self._root = tk.Toplevel(master=parent)
             self._root.title("Edit Schedule")
             self._root.resizable(False, False)
             self._root.protocol("WM_DELETE_WINDOW", self.__close__)
 
             self._main_f = tk.Frame(self._root)
-            self._schedule_n = self.build_schedule()
+            self._schedule_n = self.build_schedule(focus_day=self._edit_day)
             self._btn_f = tk.Frame(self._main_f)
             self._add_class_b = tk.Button(self._btn_f, text="Add Class", **Style.def_btn(26),
                                           command=self.__add_class__)
@@ -456,7 +457,7 @@ class ScheduleEditor:
         self._schedule_n.grid(row=1, column=1, sticky="nsew", **Padding.default())
         GUtils.lift_win(self._root)
 
-    def __day_layout__(self, classes_: list, day_str_: str, schedule_n: ttk.Notebook):
+    def __day_layout__(self, classes_: list, day_str_: str, schedule_n: ttk.Notebook) -> tk.Frame:
         """Build widgets to display each day in the schedule."""
 
         layout_f = tk.Frame(schedule_n)
@@ -528,6 +529,7 @@ class ScheduleEditor:
                 tk.Label(inp_f, text=e_.args[0], **Style.def_txt(fg=Colours.M_RED)) \
                     .grid(row=1, column=1, sticky="w", **Padding.pad((Padding.DEF_X, (Padding.DEF_Y, 0))))
             else:
+                self._edit_day = self.schedule.day2int(day)
                 GUtils.destroy_all(inp_w)
                 self.__refresh_sch__()
 
@@ -594,6 +596,7 @@ class ScheduleEditor:
         """
 
         self.schedule.delete_class(class_)
+        self._edit_day = self.schedule.day2int(class_.class_day)
         self.__refresh_sch__()
 
     def __edit_class(self, edit_class: Class):
@@ -641,10 +644,11 @@ class ScheduleEditor:
         else:
             GUtils.destroy_all(self._root)
 
-    def build_schedule(self, schedule_n: ttk.Notebook = None) -> ttk.Notebook:
+    def build_schedule(self, schedule_n: ttk.Notebook = None, focus_day: int = None) -> ttk.Notebook:
         """
         Discard old schedule display widget and return a new, updated schedule display widget.
         :param schedule_n: the old schedule display widget to discard
+        :param focus_day: the day of the week to focus the schedule on
         :return: the new, updated schedule display widget
         """
 
@@ -655,6 +659,7 @@ class ScheduleEditor:
             new_schedule_n.add(child=layout_f, text=day_str)
         if schedule_n is not None:
             schedule_n.destroy()
+        new_schedule_n.select(focus_day if focus_day is not None else self._edit_day)
         return new_schedule_n
 
 
@@ -1032,7 +1037,7 @@ class MainWindow(tk.Toplevel):
         try:
             editor = sch_editor or ScheduleEditor(self, edit_mode=False)
             editor.edit_mode = False
-            new_schedule_n = editor.build_schedule(self.schedule_n)
+            new_schedule_n = editor.build_schedule(self.schedule_n, focus_day=Utils.curr_day())
             self.__refresh_class_info__(editor.schedule)
             self.__rem_loading__()
         except CommonError as e:

@@ -203,18 +203,17 @@ class Style:
 class SubjectEditor(tk.Toplevel):
     """Displays a window for editing registered subjects."""
 
-    def __init__(self, smart_sch: SmartScheduler, refresh_func):
+    def __init__(self, parent: "MainWindow"):
         """
         Initialises widgets and builds the registered subjects editor window.
-        :param smart_sch: an instance of SmartScheduler to serve as the backend for editing subjects
-        :param refresh_func: external function to refresh schedule and class information
+        :param parent: the parent MainWindow instance
         """
 
-        super().__init__()
-        self._refresh_f = refresh_func
+        super().__init__(master=parent)
+        self._refresh_f = parent.refresh
 
         try:
-            self._subjects = Subjects(smart_sch)
+            self._subjects = Subjects(parent.smart_sch)
         except CommonError:
             self.destroy()
             raise
@@ -403,20 +402,19 @@ class SubjectEditor(tk.Toplevel):
 class ScheduleEditor:
     """Rebuilds displayed schedule or displays a window to edit schedule."""
 
-    def __init__(self, smart_sch: SmartScheduler, schedule: Schedule = None, refresh_func=None):
+    def __init__(self, parent: "MainWindow", edit_mode: bool):
         """
         Rebuild displayed schedule or initialise widgets and build window for editing schedule.
-        :param smart_sch: an instance of SmartScheduler to serve as the backend for editing schedule
-        :param schedule: optional, will be used instead of a new instance of Schedule if provided
-        :param refresh_func: external function to refresh schedule and class information
+        :param parent: the parent MainWindow instance
+        :param edit_mode: a boolean flag that signals if the schedule is to be refreshed or edited
         """
 
-        self._smart_sch = smart_sch
-        self._refresh_f = refresh_func
-        self.edit_mode = self._refresh_f is not None
+        self._smart_sch = parent.smart_sch
+        self._refresh_f = parent.refresh
+        self.edit_mode = edit_mode
 
         try:
-            self.schedule = schedule or Schedule(self._smart_sch)
+            self.schedule = Schedule(self._smart_sch)
             self.disp_subs = {self.schedule.get_class_name(reg_code=reg_code): reg_code for reg_code in
                               self._smart_sch.get_reg_subjects().keys()}
         except CommonError:
@@ -427,7 +425,7 @@ class ScheduleEditor:
         if self.edit_mode:
             if not self._reg_subs:
                 raise CommonError(flag="no_subs")
-            self._root = tk.Toplevel()
+            self._root = tk.Toplevel(master=parent)
             self._root.title("Edit Schedule")
             self._root.resizable(False, False)
             self._root.protocol("WM_DELETE_WINDOW", self.__close__)
@@ -824,6 +822,7 @@ class MainWindow(tk.Toplevel):
         super().__init__(master=root)
         self.root = root
         self.smart_sch = smart_sch
+        self.refresh = self.__refresh__
         self.c_name = tk.StringVar(self, "")
         self.c_duration = tk.StringVar(self, "")
         self.n_name = tk.StringVar(self, "")
@@ -978,7 +977,7 @@ class MainWindow(tk.Toplevel):
         """Attempts to open a new window to edit registered subjects and displays any errors encountered."""
 
         try:
-            SubjectEditor(self.smart_sch, self.__refresh__)
+            SubjectEditor(self)
             self.__rem_loading__()
         except CommonError as e:
             if e.flag == "l_out":
@@ -1029,7 +1028,7 @@ class MainWindow(tk.Toplevel):
         """
 
         try:
-            editor = sch_editor or ScheduleEditor(self.smart_sch)
+            editor = sch_editor or ScheduleEditor(self, edit_mode=False)
             editor.edit_mode = False
             new_schedule_n = editor.build_schedule(self.schedule_n)
             self.__refresh_class_info__(editor.schedule)
@@ -1051,7 +1050,7 @@ class MainWindow(tk.Toplevel):
         """Attempts to open a new window to edit schedule and displays any errors encountered."""
 
         try:
-            ScheduleEditor(self.smart_sch, refresh_func=self.__refresh__)
+            ScheduleEditor(self, edit_mode=True)
             self.__rem_loading__()
         except CommonError as e:
             if e.flag == "l_out":

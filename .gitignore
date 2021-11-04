@@ -22,9 +22,10 @@ releases/
 *.spec
 !smartscheduler_build.spec
 
-# databases
+# databases and mock sever
 smartscheduler/**/*.db
 test/**/*.db
+smartscheduler/remote_server/
 
 # test folders and files
 /test*.py

@@ -10,10 +10,10 @@ class GUtils:
     """Provides graphical utilities for tkinter windows."""
 
     class ScrollableFrame(tk.Frame):
-        def __init__(self, parent, edit_mode: bool):
-            super().__init__(parent)
-            self.edit_mode = edit_mode
-            self.canvas = tk.Canvas(self, height=100 if self.edit_mode else 250, bd=0, highlightthickness=0)
+
+        def __init__(self, parent, name: str, edit_mode: bool):
+            super().__init__(parent, name=name)
+            self.canvas = tk.Canvas(self, height=157 if edit_mode else 238, bd=0, highlightthickness=0)
             self.frame = tk.Frame(self.canvas)
             self.vsb = tk.Scrollbar(self, orient=tk.VERTICAL, command=self.canvas.yview)
             self.canvas.configure(yscrollcommand=self.vsb.set)
@@ -21,12 +21,12 @@ class GUtils:
             self.vsb.pack(side=tk.RIGHT, fill=tk.Y)
             self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             self.canvas.create_window((4, 4), window=self.frame, anchor=tk.NW)
-            self.canvas.bind("<Configure>", self.on_canvas_configure)
+            self.frame.bind("<Enter>", lambda _: self.canvas.bind_all("<MouseWheel>", self.on_mousewheel_scroll))
+            self.frame.bind("<Leave>", lambda _: self.canvas.unbind_all("<MouseWheel>"))
             self.frame.bind("<Configure>", self.on_frame_configure)
 
-        def on_canvas_configure(self, _):
-            if self.edit_mode:
-                self.canvas.yview_moveto("1.0")
+        def on_mousewheel_scroll(self, event):
+            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), tk.UNITS)
 
         def on_frame_configure(self, event):
             self.canvas.configure(width=event.width, scrollregion=self.canvas.bbox(tk.ALL))
@@ -453,14 +453,14 @@ class ScheduleEditor:
         if self.edit_mode:
             if not self._reg_subs:
                 raise CommonError(flag="no_subs")
-            self._edit_day = Utils.curr_day()
+            self._edit_day_idx = Utils.curr_day()
             self._root = tk.Toplevel(master=parent)
             self._root.title("Edit Schedule")
             self._root.resizable(False, False)
             self._root.protocol("WM_DELETE_WINDOW", self.__close__)
 
             self._main_f = tk.Frame(self._root)
-            self._schedule_n = self.build_schedule(focus_day=self._edit_day)
+            self._schedule_n = self.build_schedule(focus_day=self._edit_day_idx)
             self._btn_f = tk.Frame(self._main_f)
             self._add_class_b = tk.Button(self._btn_f, text="Add Class", **Style.def_btn(26),
                                           command=self.__add_class__)
@@ -477,18 +477,20 @@ class ScheduleEditor:
             self._root.geometry("+%d+%d" % GUtils.win_pos(self._root, 0.35, 0.35))
             GUtils.lift_win(self._root)
 
-    def __refresh_sch__(self):
-        """Reconstruct schedule widget to reflect any changes made to the schedule."""
+    def __refresh_day__(self, edited_day: str):
+        """Reconstruct edited day in schedule widget to reflect the changes made."""
 
-        self._schedule_n.destroy()
-        self._schedule_n = self.build_schedule()
-        self._schedule_n.grid(row=1, column=1, sticky="nsew", **Padding.default())
+        self.__day_layout__(self.schedule.dict_schedule[edited_day], edited_day, self._schedule_n)
+        self._schedule_n.select(self._edit_day_idx)
         GUtils.lift_win(self._root)
 
-    def __day_layout__(self, classes_: list, day_str_: str, schedule_n: ttk.Notebook) -> tk.Frame:
+    def __day_layout__(self, classes_: list, day_str_: str, schedule_n: ttk.Notebook):
         """Build widgets to display each day in the schedule."""
-        container_f = GUtils.ScrollableFrame(schedule_n, self.edit_mode)
-        layout_f = container_f.frame
+
+        container_f: GUtils.ScrollableFrame = schedule_n.children[day_str_.lower()]
+        layout_f: tk.Frame = container_f.frame
+        for w in layout_f.winfo_children():
+            w.destroy()
         if not classes_:
             status_l = tk.Label(layout_f, text=f"No classes on {day_str_}.", **Style.def_txt())
             status_l.grid(row=1, column=1, sticky="nsew", **Padding.pad((50, 50)))
@@ -516,7 +518,7 @@ class ScheduleEditor:
                                              command=lambda: Utils.open_class_link(self._reg_subs[class_.reg_code]))
                     class_link_b.grid(row=1, column=3, sticky="e", **Padding.col_elem())
                 i += 1
-        return container_f
+        container_f.update_idletasks()
 
     def __add_class__(self, edit_class: Class = None):
         """
@@ -557,9 +559,11 @@ class ScheduleEditor:
                 tk.Label(inp_f, text=e_.args[0], **Style.def_txt(fg=Colours.M_RED)) \
                     .grid(row=1, column=1, sticky="w", **Padding.pad((Padding.DEF_X, (Padding.DEF_Y, 0))))
             else:
-                self._edit_day = self.schedule.day2int(day)
+                self._edit_day_idx = self.schedule.day2int(day)
                 GUtils.destroy_all(inp_w)
-                self.__refresh_sch__()
+                if edit_class:
+                    self.__refresh_day__(edit_class.class_day)
+                self.__refresh_day__(day)
 
         inp_w = tk.Toplevel(self._main_f)
         inp_w.protocol("WM_DELETE_WINDOW", close_reg_win)
@@ -624,8 +628,8 @@ class ScheduleEditor:
         """
 
         self.schedule.delete_class(class_)
-        self._edit_day = self.schedule.day2int(class_.class_day)
-        self.__refresh_sch__()
+        self._edit_day_idx = self.schedule.day2int(class_.class_day)
+        self.__refresh_day__(class_.class_day)
 
     def __edit_class(self, edit_class: Class):
         """
@@ -681,13 +685,13 @@ class ScheduleEditor:
         """
 
         new_schedule_n = ttk.Notebook(schedule_n.master if schedule_n is not None else self._main_f)
-        for day_str in self.schedule.day_strs:
-            classes = self.schedule.dict_schedule[day_str]
-            layout_f = self.__day_layout__(classes, day_str, new_schedule_n)
-            new_schedule_n.add(child=layout_f, text=day_str)
+        for day in self.schedule.day_strs:
+            new_schedule_n.add(child=GUtils.ScrollableFrame(new_schedule_n, day.lower(), self.edit_mode), text=day)
+            classes = self.schedule.dict_schedule[day]
+            self.__day_layout__(classes, day, new_schedule_n)
         if schedule_n is not None:
             schedule_n.destroy()
-        new_schedule_n.select(focus_day if focus_day is not None else self._edit_day)
+        new_schedule_n.select(focus_day if focus_day is not None else self._edit_day_idx)
         return new_schedule_n
 
 

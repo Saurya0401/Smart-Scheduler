@@ -29,7 +29,13 @@ class GUtils:
                 self.canvas.yview_moveto("1.0")
 
         def on_frame_configure(self, event):
-            self.canvas.configure(width=event.width, scrollregion=self.canvas.bbox("all"))
+            self.canvas.configure(width=event.width, scrollregion=self.canvas.bbox(tk.ALL))
+
+    @staticmethod
+    def btn_press_anim(btn: tk.Button):
+        fg, bg = btn.cget("fg"), btn.cget("bg")
+        btn.config(relief=tk.SUNKEN, fg=Colours.TEXT, bg=Colours.BG)
+        btn.after(200, lambda: btn.config(relief=tk.FLAT, fg=fg, bg=bg))
 
     @staticmethod
     def disp_msg(msg: str, msg_t: str, parent: tk.Tk or tk.Toplevel):
@@ -726,17 +732,17 @@ class LoginWindow(tk.Toplevel):
             self.c_pswrd_e = tk.Entry(self.login_f, textvariable=self.inp_c_pswrd, show="*", **Style.def_txt())
         self.btn_f = tk.Frame(self.login_f)
         if self.action == "login":
-            self.login_b = tk.Button(self.btn_f, text="Login", **Style.def_btn(width=15), command=self.__action__)
+            self.login_b = tk.Button(self.btn_f, text="Login", **Style.def_btn(width=15),
+                                     command=lambda: self.__btn_cmd__("login"))
         else:
             self.cancel_b = tk.Button(self.btn_f, text="Cancel", **Style.def_btn(width=15, bg=Colours.M_RED),
-                                      command=lambda: self.change_win("login"))
+                                      command=lambda: self.__change_win__("login"))
         self.signup_b = tk.Button(self.btn_f, text="Sign Up", **Style.def_btn(width=15),
-                                  command=self.__action__ if self.action == "sign up" else lambda: self.change_win(
-                                      "sign up"))
+                                  command=lambda: self.__btn_cmd__("sign up"))
         self.pswrd_b = tk.Button(self.btn_f, text="Change Password", **(
             Style.def_btn(width=15) if action == "change password" else Style.txt_btn(width=15)),
-                                 command=self.__action__ if self.action == "change password" else lambda:
-                                 self.change_win("change password"))
+                                 command=lambda: self.__btn_cmd__("change password"))
+        self.bind("<Return>", self.__btn_pressed__)
 
         self.login_f.grid(sticky="nsew")
         self.stu_id_l.grid(row=1, column=1, **Padding.no_right())
@@ -763,7 +769,16 @@ class LoginWindow(tk.Toplevel):
 
         self.geometry("+%d+%d" % GUtils.win_pos(self, 0.4, 0.4))
 
-    def change_win(self, action: str):
+    def __btn_pressed__(self, _):
+        if self.action == "login":
+            GUtils.btn_press_anim(self.login_b)
+        elif self.action == "sign up":
+            GUtils.btn_press_anim(self.signup_b)
+        elif self.action == "change password":
+            GUtils.btn_press_anim(self.pswrd_b)
+        self.__btn_cmd__(self.action)
+
+    def __change_win__(self, action: str):
         """
         Changes window widgets to accommodate a different action
         :param action: the new action to change to
@@ -772,15 +787,21 @@ class LoginWindow(tk.Toplevel):
         GUtils.destroy_all(self)
         LoginWindow(self.root, self.smart_sch, action=action).mainloop()
 
-    def __action__(self):
-        """Inserts a loading screen and executes a certain action depending on self.__action__."""
+    def __btn_cmd__(self, action: str):
+        """
+        Inserts a loading screen and executes a certain action depending on self.action.
+        :param action: signals to change window if not identical to self.action
+        """
 
-        if self.action == "login":
-            GUtils.disp_loading(self.loading_win, self.__login__)
-        elif self.action == "sign up":
-            GUtils.disp_loading(self.loading_win, self.__sign_up__)
-        elif self.action == "change password":
-            GUtils.disp_loading(self.loading_win, self.__change_password__)
+        if action == self.action:
+            if self.action == "login":
+                GUtils.disp_loading(self.loading_win, self.__login__)
+            elif self.action == "sign up":
+                GUtils.disp_loading(self.loading_win, self.__sign_up__)
+            elif self.action == "change password":
+                GUtils.disp_loading(self.loading_win, self.__change_password__)
+        else:
+            self.__change_win__(action)
 
     def __change_password__(self):
         """Attempts to change password and displays any errors encountered."""

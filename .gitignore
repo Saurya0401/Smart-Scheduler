@@ -5,19 +5,22 @@ test/__pycache__/
 .idea/
 
 # files
+feedback.md
 *.txt
 !requirements.txt
 
-# .exe build folders
+# build files folders
+build.bat
 build/
 dist/
+Smart Scheduler/
 
-# .tar releases folder
+# releases folder
 releases/
 
 # extra .spec files
 *.spec
-!smartscheduler.spec
+!smartscheduler_build.spec
 
 # databases
 smartscheduler/**/*.db

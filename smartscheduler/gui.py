@@ -9,6 +9,28 @@ from smartscheduler.utils import Utils
 class GUtils:
     """Provides graphical utilities for tkinter windows."""
 
+    class ScrollableFrame(tk.Frame):
+        def __init__(self, parent, edit_mode: bool):
+            super().__init__(parent)
+            self.edit_mode = edit_mode
+            self.canvas = tk.Canvas(self, height=100 if self.edit_mode else 250, bd=0, highlightthickness=0)
+            self.frame = tk.Frame(self.canvas)
+            self.vsb = tk.Scrollbar(self, orient=tk.VERTICAL, command=self.canvas.yview)
+            self.canvas.configure(yscrollcommand=self.vsb.set)
+
+            self.vsb.pack(side=tk.RIGHT, fill=tk.Y)
+            self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            self.canvas.create_window((4, 4), window=self.frame, anchor=tk.NW)
+            self.canvas.bind("<Configure>", self.on_canvas_configure)
+            self.frame.bind("<Configure>", self.on_frame_configure)
+
+        def on_canvas_configure(self, _):
+            if self.edit_mode:
+                self.canvas.yview_moveto("1.0")
+
+        def on_frame_configure(self, event):
+            self.canvas.configure(width=event.width, scrollregion=self.canvas.bbox("all"))
+
     @staticmethod
     def disp_msg(msg: str, msg_t: str, parent: tk.Tk or tk.Toplevel):
         """
@@ -459,8 +481,8 @@ class ScheduleEditor:
 
     def __day_layout__(self, classes_: list, day_str_: str, schedule_n: ttk.Notebook) -> tk.Frame:
         """Build widgets to display each day in the schedule."""
-
-        layout_f = tk.Frame(schedule_n)
+        container_f = GUtils.ScrollableFrame(schedule_n, self.edit_mode)
+        layout_f = container_f.frame
         if not classes_:
             status_l = tk.Label(layout_f, text=f"No classes on {day_str_}.", **Style.def_txt())
             status_l.grid(row=1, column=1, sticky="nsew", **Padding.pad((50, 50)))
@@ -488,7 +510,7 @@ class ScheduleEditor:
                                              command=lambda: Utils.open_class_link(self._reg_subs[class_.reg_code]))
                     class_link_b.grid(row=1, column=3, sticky="e", **Padding.col_elem())
                 i += 1
-        return layout_f
+        return container_f
 
     def __add_class__(self, edit_class: Class = None):
         """

@@ -10,15 +10,19 @@ Smart Scheduler is a desktop application aimed at helping students at the Facult
  - Scan QR codes for attendance.
 ## Application Releases
 The application releases can be found [here](https://github.com/Saurya0401/Smart-Scheduler/releases). It is recommended to download the latest stable release for the best experience. <br />
-Each release will be a `.tar` file containing a single folder, `Smart Scheduler`. This folder will contain the 
+Each release will be a `.zip` file containing a single folder, `Smart Scheduler`. This folder will contain the 
 application executable `SmartScheduler.exe`, and the `config.ini` configuration file.
 ## Application GUI Configuration
 The `config.ini` file contains configuration info for the GUI. It is not essential for proper functioning of the application, but the application will display a warning if the file is not found or corrupted. <br /> 
 This file can be used to change the colours, the font family and the font sizes used in the GUI. 
 ## Manually Building the Application
-*NOTE: Python 3.8 (32-bit) and above is required for the build process.* <br />
-To manually build the application, execute the `smartscheduler_build.bat` file[^1].
-This batch file should install all required dependencies via pip before starting the build process. <br />
+**NOTE: Python 3.8 (32-bit) and above is required for the build process.** <br />
+To manually build the application: 
+1. Download and extract the source code .zip archive.
+2. Navigate to the folder in which the source code has been extracted.
+3. Execute the `smartscheduler_build.bat` file[^1]. <br />
+
+This batch file should install all required dependencies via pip before starting the build process.
 If the batch file executes successfully, a `Smart Scheduler` folder will be created. This folder will contain the executable `SmartScheduler.exe`[^2] and the `config.ini` configuration file. <br />
 
 [^1]:  It is advisable to exclude the directory containing `build.bat` from antivirus programs as they might prevent 

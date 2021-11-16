@@ -574,8 +574,7 @@ class Schedule:
         :param curr_class: a Class object whose corresponding link is to be stored
         """
 
-        if curr_class:
-            self._smart_sch.update_curr_link(self._reg_subjects[curr_class.reg_code])
+        self._smart_sch.update_curr_link(self._reg_subjects[curr_class.reg_code] if curr_class else None)
 
     def update_schedule(self):
         """Update the current schedule to the database."""
